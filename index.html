@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ElectrospinTEK Machine Tracking</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- LOGIN & SIGN UP SCREEN OVERLAY -->
+  <div id="loginScreen" class="login-screen-overlay">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="logo-wrapper">
+          <img src="logo.png" alt="ElectrospinTEK Logo" class="brand-logo-img" style="height: 90px;">
+        </div>
+        <div class="login-title">ElectrospinTEK ERP</div>
+        <div class="subtext">Machine Lifecycle & Production Management</div>
+      </div>
+
+      <!-- Sign In vs Sign Up Tabs -->
+      <div class="auth-tabs margin-bottom-md">
+        <button id="tabBtnSignIn" class="auth-tab-btn active" onclick="switchAuthTab('signin')">🔑 Sign In</button>
+        <button id="tabBtnSignUp" class="auth-tab-btn" onclick="switchAuthTab('signup')">📝 Create Account (Sign Up)</button>
+      </div>
+
+      <!-- Sign In Form -->
+      <form id="loginForm" class="login-form" onsubmit="handleUserLogin(event)">
+        <div id="loginErrorMsg" class="login-error-alert" style="display: none;">
+          ❌ Invalid email or password. Please try again.
+        </div>
+
+        <div class="form-group margin-bottom-sm">
+          <label class="form-label">Work Email Address</label>
+          <input type="email" id="loginEmail" class="form-control" placeholder="admin@electrospintek.com" required value="admin@electrospintek.com">
+        </div>
+
+        <div class="form-group margin-bottom-md">
+          <label class="form-label">Password</label>
+          <div class="password-wrapper">
+            <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required value="admin123">
+            <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility('loginPassword', this)" title="Show Password">👁️</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg width-100 margin-bottom-md">
+          ⚡ Sign In to ElectrospinTEK ERP
+        </button>
+
+        <div class="quick-login-box">
+          <div class="subtext margin-bottom-sm" style="color:var(--primary); font-weight:700;">⚡ Quick Demo Login Presets:</div>
+          <div class="quick-login-grid">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="quickFillLogin('admin@electrospintek.com', 'admin123')">⚡ Super Admin</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="quickFillLogin('engineer@electrospintek.com', 'eng123')">🔧 Field Eng</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="quickFillLogin('sales@electrospintek.com', 'sales123')">💰 Sales Lead</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="quickFillLogin('observer@electrospintek.com', 'obs123')">👁️ Guest View</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Sign Up Form (Create New Account) -->
+      <form id="signUpForm" class="login-form" style="display: none;" onsubmit="handleUserSignUp(event)">
+        <div id="signUpErrorMsg" class="login-error-alert" style="display: none;"></div>
+
+        <div class="form-group margin-bottom-sm">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="signUpFullName" class="form-control" placeholder="e.g. John Doe" required>
+        </div>
+
+        <div class="form-group margin-bottom-sm">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="signUpEmail" class="form-control" placeholder="user@electrospintek.com" required>
+        </div>
+
+        <div class="form-group margin-bottom-sm">
+          <label class="form-label">Choose Password</label>
+          <div class="password-wrapper">
+            <input type="password" id="signUpPassword" class="form-control" placeholder="Minimum 6 characters" required minlength="4">
+            <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility('signUpPassword', this)" title="Show Password">👁️</button>
+          </div>
+        </div>
+
+        <div class="form-group margin-bottom-md">
+          <label class="form-label">Account Role Permission</label>
+          <select id="signUpRole" class="form-select" required>
+            <option value="admin">⚡ Super Admin (Full Edit Access)</option>
+            <option value="engineer">🔧 Field Engineer (Quality Inspection & Service)</option>
+            <option value="sales">💰 Sales Manager (Invoices & Financials)</option>
+            <option value="observer">👁️ Guest Observer (View Only)</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg width-100">
+          ✨ Register New Account & Sign In
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <div class="app-container">
+    
+    <!-- NAVIGATION BAR -->
+    <header class="navbar">
+      <div class="nav-brand">
+        <!-- White Container Fitting Around Logo -->
+        <div class="logo-wrapper">
+          <img src="logo.png" alt="ElectrospinTEK Logo" class="brand-logo-img">
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">ElectrospinTEK</span>
+          <span class="brand-subtitle">Machine Tracking & Production ERP</span>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <button class="nav-tab active" data-view="dashboard">
+          📊 Master Directory
+        </button>
+        <button class="nav-tab" data-view="sold-machines">
+          💰 Machines Sold
+        </button>
+        <button class="nav-tab" data-view="pipeline">
+          🔄 Lifecycle Pipeline
+        </button>
+        <button class="nav-tab" data-view="stock">
+          📦 Component Stock
+        </button>
+        <button class="nav-tab" data-view="audit">
+          📜 System Audit Logs
+        </button>
+        <button class="nav-tab" data-view="permissions">
+          👥 User Permissions
+        </button>
+      </nav>
+
+      <div class="user-role-control">
+        <div class="user-profile-badge">
+          <div id="userAvatar" class="user-avatar-circle">A</div>
+          <div class="user-info-text">
+            <span id="userEmailDisplay" class="user-email-display">admin@electrospintek.com</span>
+            <span id="userRoleBadge" class="user-role-badge">Super Admin</span>
+          </div>
+          <button class="btn-logout" onclick="handleUserLogout()" title="Sign Out">Sign Out</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ROLE BANNER INDICATOR -->
+    <div id="roleBanner" class="role-banner admin-mode">
+      <div class="banner-content">
+        <span id="roleBannerIcon">⚡</span>
+        <span id="roleBannerText"><strong>SUPER ADMIN MODE:</strong> Full access granted. Edit machine records, launch production, and manage user permissions.</span>
+      </div>
+    </div>
+
+    <!-- MAIN CONTENT VIEW -->
+    <main class="main-content">
+      
+      <!-- DASHBOARD VIEW: MASTER MACHINE DIRECTORY -->
+      <section id="view-dashboard" class="view-section active">
+        
+        <!-- KPI METRICS SUMMARY -->
+        <div class="kpi-grid">
+          <div class="kpi-card" onclick="switchView('dashboard')">
+            <div class="kpi-icon blue">📦</div>
+            <div class="kpi-data">
+              <span id="kpiTotalMachines" class="kpi-value">0</span>
+              <span class="kpi-label">Total Machines Tracked</span>
+            </div>
+          </div>
+          
+          <div class="kpi-card" onclick="quickFilterLocation('In Production / Fabrication')">
+            <div class="kpi-icon amber">🏭</div>
+            <div class="kpi-data">
+              <span id="kpiProductionCount" class="kpi-value">0</span>
+              <span class="kpi-label">In Active Fabrication</span>
+            </div>
+          </div>
+
+          <div class="kpi-card" onclick="quickFilterLocation('Stock - Turkey')">
+            <div class="kpi-icon purple">🇹🇷</div>
+            <div class="kpi-data">
+              <span id="kpiTurkeyStockCount" class="kpi-value">0</span>
+              <span class="kpi-label">Turkey Warehouse Stock</span>
+            </div>
+          </div>
+
+          <div class="kpi-card" onclick="quickFilterLocation('Stock - USA')">
+            <div class="kpi-icon blue">🇺🇸</div>
+            <div class="kpi-data">
+              <span id="kpiUSAStockCount" class="kpi-value">0</span>
+              <span class="kpi-label">USA Warehouse Stock</span>
+            </div>
+          </div>
+
+          <div class="kpi-card" onclick="switchView('sold-machines')">
+            <div class="kpi-icon emerald">💰</div>
+            <div class="kpi-data">
+              <span id="kpiSold2026Count" class="kpi-value">0</span>
+              <span class="kpi-label">Sold Customer Machines</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- SEARCH, FILTERS & ACTION CONTROLS -->
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Master Machine Directory</h2>
+            <p class="section-subtitle">Real-time status tracking, engineering specs, invoices, and FAT quality control</p>
+          </div>
+          <div class="inline-flex gap-sm">
+            <button id="btnUndoHeader" class="btn btn-secondary admin-only" onclick="performUndo()" disabled title="Undo last edit (Ctrl + Z)">
+              ↩️ Undo Last Action
+            </button>
+            <button class="btn btn-secondary" onclick="openExportModal()">
+              📊 Import / Export Google Sheets
+            </button>
+            <button class="btn btn-primary admin-only" onclick="openStartProductionModal()">
+              ⚡ Start New Production Launch
+            </button>
+          </div>
+        </div>
+
+        <!-- FILTER TOOLBAR -->
+        <div class="card-box margin-bottom-md">
+          <div class="filter-bar-grid">
+            <div class="search-bar flex-2">
+              <span>🔍</span>
+              <input type="text" id="masterSearchInput" placeholder="Search by Serial Number, Model Name, Customer, Invoice #, PO #..." onkeyup="applyFilters()">
+            </div>
+
+            <div class="form-group flex-1">
+              <label class="form-label">Location / Stage Filter</label>
+              <select id="filterLocationSelect" class="form-select" onchange="applyFilters()">
+                <option value="ALL">All Stages & Locations</option>
+                <option value="In Production / Fabrication">In Production / Fabrication</option>
+                <option value="Stock - Turkey">Stock - Turkey Warehouse</option>
+                <option value="Stock - USA">Stock - USA Warehouse</option>
+                <option value="Shipping to Customer (from Turkey)">Shipping to Customer (from Turkey)</option>
+                <option value="Shipping to Customer (from USA)">Shipping to Customer (from USA)</option>
+                <option value="Delivered to Customer">Delivered to Customer</option>
+              </select>
+            </div>
+
+            <div class="form-group flex-1">
+              <label class="form-label">Payment Status</label>
+              <select id="filterPaymentSelect" class="form-select" onchange="applyFilters()">
+                <option value="ALL">All Payment Statuses</option>
+                <option value="Fully Paid (100%)">Fully Paid (100%)</option>
+                <option value="Deposit Received">Deposit Paid (50%)</option>
+                <option value="Unpaid">Unpaid / Invoice Sent</option>
+                <option value="Stock Listing">Stock Listing</option>
+              </select>
+            </div>
+
+            <div class="form-group flex-1">
+              <label class="form-label">Sales Year</label>
+              <select id="filterYearSelect" class="form-select" onchange="applyFilters()">
+                <option value="ALL">All Sales Years</option>
+                <option value="2026">2026 Sales</option>
+                <option value="2025">2025 Sales</option>
+                <option value="UNSOLD_STOCK">Unsold Stock Inventory</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- MASTER DIRECTORY DATA TABLE -->
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Machine Model & Serial #</th>
+                <th>Customer / Owner</th>
+                <th>Current Stage & Location</th>
+                <th>Est. Finish Date</th>
+                <th>Sales Invoice & Order #</th>
+                <th>PO & Payment Status</th>
+                <th class="admin-only">Technical Specs</th>
+                <th>Files & Media</th>
+                <th>FAT Test Files</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="masterMachineTableBody">
+              <!-- Dynamically rendered by app.js -->
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+
+      <!-- MACHINES SOLD VIEW: SALES & FINANCIAL ERP -->
+      <section id="view-sold-machines" class="view-section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Machines Sold Directory</h2>
+            <p class="section-subtitle">Financial ERP overview of all customer-purchased ElectrospinTEK systems</p>
+          </div>
+          <div class="inline-flex gap-sm">
+            <button class="btn btn-secondary" onclick="exportSoldMachinesCSV()">
+              💰 Download Sales CSV (Google Sheets)
+            </button>
+            <button class="btn btn-primary admin-only" onclick="openStartProductionModal()">
+              ⚡ Launch Customer Machine Order
+            </button>
+          </div>
+        </div>
+
+        <!-- FINANCIAL SUMMARY KPIS -->
+        <div class="kpi-grid margin-bottom-md">
+          <div class="kpi-card">
+            <div class="kpi-icon emerald">💵</div>
+            <div class="kpi-data">
+              <span id="soldKpiTotalRevenue" class="kpi-value">$0</span>
+              <span class="kpi-label">Total Quoted Sales Revenue</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon blue">💳</div>
+            <div class="kpi-data">
+              <span id="soldKpiCashCollected" class="kpi-value">$0</span>
+              <span class="kpi-label">Total Cash Collected</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon amber">⏳</div>
+            <div class="kpi-data">
+              <span id="soldKpiOutstandingBalance" class="kpi-value">$0</span>
+              <span class="kpi-label">Outstanding Balance Due</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon purple">📦</div>
+            <div class="kpi-data">
+              <span id="soldKpiMachineCount" class="kpi-value">0</span>
+              <span class="kpi-label">Total Sold Systems</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- SOLD MACHINES DATA TABLE -->
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Machine Model & Serial #</th>
+                <th>Customer Name</th>
+                <th>Invoice & Order #</th>
+                <th>Sale Date / Year</th>
+                <th>Est. Finish Date</th>
+                <th>Quoted Price ($)</th>
+                <th>Amount Paid ($)</th>
+                <th>Payment Status</th>
+                <th>Location / Stage</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="soldMachinesTableBody">
+              <!-- Dynamically rendered by app.js -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- LIFECYCLE PIPELINE VIEW (KANBAN) -->
+      <section id="view-pipeline" class="view-section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Production & Shipping Pipeline</h2>
+            <p class="section-subtitle">Visual Kanban progression across fabrication, stock warehouses, and shipping</p>
+          </div>
+          <button class="btn btn-primary admin-only" onclick="openStartProductionModal()">
+            ⚡ Launch Production Card
+          </button>
+        </div>
+
+        <div id="pipelineGrid" class="pipeline-grid">
+          <!-- Dynamically rendered by app.js -->
+        </div>
+      </section>
+
+      <!-- COMPONENT PARTS STOCK INVENTORY -->
+      <section id="view-stock" class="view-section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Component Stock & Inventory</h2>
+            <p class="section-subtitle">High-voltage generators, syringe pumps, motion controllers, and emitters</p>
+          </div>
+          <div class="inline-flex gap-sm">
+            <button class="btn btn-secondary" onclick="exportPartsInventoryCSV()">
+              📦 Export Parts CSV
+            </button>
+            <button class="btn btn-primary admin-only" onclick="openAddStockModal()">
+              + Add New Component Stock
+            </button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>SKU & Component Name</th>
+                <th>Category</th>
+                <th>Bin Location</th>
+                <th>In Stock Qty</th>
+                <th>Min Threshold</th>
+                <th>Unit Cost ($)</th>
+                <th>Stock Status</th>
+                <th class="admin-only">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="stockTableBody">
+              <!-- Dynamically rendered by app.js -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SYSTEM AUDIT LOGS -->
+      <section id="view-audit" class="view-section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">System Audit Trail</h2>
+            <p class="section-subtitle">Complete chronological record of all status changes, date edits, and user logins</p>
+          </div>
+        </div>
+
+        <div class="card-box">
+          <div id="auditTimeline" class="timeline">
+            <!-- Dynamically rendered by app.js -->
+          </div>
+        </div>
+      </section>
+
+      <!-- USER PERMISSIONS & ACCOUNTS VIEW -->
+      <section id="view-permissions" class="view-section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">User Permissions & Access Control</h2>
+            <p class="section-subtitle">Manage system user accounts, roles, login credentials, and database operations</p>
+          </div>
+          <button class="btn btn-primary admin-only" onclick="toggleAddUserForm()">
+            👤 + Add New User Account
+          </button>
+        </div>
+
+        <!-- NEW USER REGISTRATION FORM BOX -->
+        <div id="addUserFormBox" class="card-box margin-bottom-md bg-darker" style="display: none;">
+          <div class="card-box-title">➕ Register New User Account</div>
+          <form onsubmit="handleCreateNewUser(event)">
+            <div class="grid-3-col margin-bottom-md">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="newUserFullName" class="form-control" placeholder="e.g. Alex Rivera" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="newUserEmail" class="form-control" placeholder="alex@electrospintek.com" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Password</label>
+                <div class="password-wrapper">
+                  <input type="password" id="newUserPassword" class="form-control" placeholder="Set password" required>
+                  <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility('newUserPassword', this)" title="Show Password">👁️</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid-2-col margin-bottom-md">
+              <div class="form-group">
+                <label class="form-label">Access Role Permission</label>
+                <select id="newUserRoleSelect" class="form-select" required>
+                  <option value="admin">⚡ Super Admin (Full Edit Access)</option>
+                  <option value="engineer">🔧 Field Engineer (Quality & Service Access)</option>
+                  <option value="sales">💰 Sales Manager (Invoices & Financials)</option>
+                  <option value="observer">👁️ Guest Observer (View Only)</option>
+                </select>
+              </div>
+              <div class="form-group align-self-end">
+                <button type="submit" class="btn btn-primary">
+                  ✨ Save New Account
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- USER ACCOUNTS TABLE -->
+        <div class="table-container margin-bottom-md">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>User Full Name</th>
+                <th>Email Address</th>
+                <th>Role Permission</th>
+                <th>Password</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="userAccountsTableBody">
+              <!-- Dynamically rendered by app.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- DATABASE CLEAR SECURITY CARD -->
+        <div class="card-box admin-only" style="border: 2px solid var(--danger); background: rgba(239, 68, 68, 0.05);">
+          <div class="flex-between">
+            <div>
+              <div style="color: var(--danger); font-weight: 800; font-size: 1.1rem; margin-bottom: 0.2rem;">
+                🧹 Danger Zone: Reset & Clear All ERP Data
+              </div>
+              <div class="subtext">
+                Permanently erases all machine records, inventory stock, and audit logs to begin fresh data entry. Requires Super Admin Password authorization.
+              </div>
+            </div>
+            <button class="btn btn-danger btn-lg" onclick="confirmClearAllDataWithPassword()">
+              🔒 Clear All Data (Re-ask Password)
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- START NEW PRODUCTION LAUNCH MODAL -->
+  <div id="startProductionModal" class="modal-overlay">
+    <div class="modal-container large">
+      <div class="modal-header">
+        <div>
+          <h3 class="section-title">⚡ Start New Production Launch</h3>
+          <p class="section-subtitle">Generate single or batch ElectrospinTEK machine tracking records</p>
+        </div>
+        <button class="close-btn" onclick="closeModal('startProductionModal')">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="startProductionForm" onsubmit="handleStartProduction(event)">
+          
+          <div class="grid-2-col margin-bottom-md">
+            <div class="form-group">
+              <label class="form-label">Production Launch Mode</label>
+              <select id="prodMode" class="form-select" onchange="toggleBatchMode()">
+                <option value="SINGLE">Single Machine Launch</option>
+                <option value="BATCH">Batch Production Launch (Multiple Units)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Target Initial Location / Warehouse</label>
+              <select id="prodTarget" class="form-select" onchange="toggleCustomerField()">
+                <option value="In Production / Fabrication">In Production / Fabrication (Turkey Facility)</option>
+                <option value="Stock - Turkey">Stock - Turkey Central Warehouse</option>
+                <option value="Stock - USA">Stock - USA Central Warehouse</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid-2-col margin-bottom-md">
+            <div class="form-group">
+              <label class="form-label">ElectrospinTEK Machine Model (Type custom or select suggestion)</label>
+              <input type="text" id="prodModel" list="machineModelSuggestions" class="form-control" placeholder="e.g. LS-200, LS-325, HH25..." required oninput="autoSuggestSerialFromModel()" onchange="autoSuggestSerialFromModel()" value="LS-325">
+              <datalist id="machineModelSuggestions">
+                <option value="LS-200">LS-200 Laboratory Spinner</option>
+                <option value="LS-200 PLUS">LS-200 PLUS Advanced System</option>
+                <option value="LS-325">LS-325 Electrospinning Pilot System</option>
+                <option value="ES400H3">ES400H3 Multi-Nozzle Line</option>
+                <option value="ES800H4">ES800H4 Industrial Production System</option>
+                <option value="HH25">HH25 Handheld Portable Electrospinner</option>
+              </datalist>
+            </div>
+
+            <div class="form-group" id="groupSerial">
+              <label class="form-label">Serial Number (Auto-Suggested 8-Char)</label>
+              <input type="text" id="prodSerial" class="form-control font-code" placeholder="e.g. LS325044" required>
+            </div>
+
+            <div class="form-group" id="groupBatchCount" style="display: none;">
+              <label class="form-label">Batch Quantity (Units)</label>
+              <input type="number" id="prodBatchQty" class="form-control" value="10" min="2" max="50">
+            </div>
+          </div>
+
+          <div class="grid-3-col margin-bottom-md">
+            <div class="form-group">
+              <label class="form-label">Customer / Owner</label>
+              <input type="text" id="prodCustomer" class="form-control" placeholder="Leave empty for Stock Warehouse">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Invoice Number</label>
+              <input type="text" id="prodInvoiceNo" class="form-control" placeholder="e.g. INV-2026-9011">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Sales Order Number</label>
+              <input type="text" id="prodOrderNo" class="form-control" placeholder="e.g. ORD-2026-440">
+            </div>
+          </div>
+
+          <div class="grid-3-col margin-bottom-md">
+            <div class="form-group">
+              <label class="form-label">Quoted Selling Price ($)</label>
+              <input type="number" id="prodSellingPrice" class="form-control" placeholder="Empty until entry">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Production Start Date</label>
+              <input type="date" id="prodStartDate" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Est. Production Finish Date (+1 Month)</label>
+              <input type="date" id="prodEstFinishDate" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group margin-bottom-md">
+            <label class="form-label">Initial Engineering & Launch Notes</label>
+            <textarea id="prodNotes" class="form-control" rows="3" placeholder="Enter special customer requests, custom nozzle sizes, or high-voltage requirements..."></textarea>
+          </div>
+
+          <div class="flex-end gap-sm">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('startProductionModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-lg">⚡ Confirm Production Launch</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT MACHINE INFO MODAL -->
+  <div id="editMachineModal" class="modal-overlay">
+    <div class="modal-container large">
+      <div class="modal-header">
+        <div>
+          <h3 class="section-title">✏️ Edit Machine Information</h3>
+          <p id="editModalSubtitle" class="section-subtitle">Modify machine serial number, model, customer, pricing, and timelines</p>
+        </div>
+        <button class="close-btn" onclick="closeModal('editMachineModal')">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="editMachineForm" onsubmit="handleSaveEditedMachine(event)">
+          <input type="hidden" id="editMachineId">
+
+          <div class="grid-2-col margin-bottom-md">
+            <div class="form-group">
+              <label class="form-label">Serial Number (8-Char)</label>
+              <input type="text" id="editSerial" class="form-control font-code" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Machine Model (Type custom or select suggestion)</label>
+              <input type="text" id="editModel" list="machineModelSuggestions" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="grid-2-col margin-bottom-md">
+            <div class="form-group">
+              <label class="form-label">Customer / Owner</label>
+              <input type="text" id="editCustomer" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Current Stage & Location</label>
+              <select id="editStage" class="form-select" required>
+                <option value="In Production / Fabrication">In Production / Fabrication</option>
+                <option value="Stock - Turkey">Stock - Turkey Warehouse</option>
+                <option value="Stock - USA">Stock - USA Warehouse</option>
+                <option value="Shipping to Customer (from Turkey)">Shipping to Customer (from Turkey)</option>
+                <option value="Shipping to Customer (from USA)">Shipping to Customer (from USA)</option>
+                <option value="Delivered to Customer">Delivered to Customer</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid-3-col margin-bottom-md">
+            <div class="form-group">
+              <label class="form-label">Invoice Number</label>
+              <input type="text" id="editInvoiceNo" class="form-control">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Sales Order Number</label>
+              <input type="text" id="editOrderNo" class="form-control">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">PO Reference Number</label>
+              <input type="text" id="editPONo" class="form-control">
+            </div>
+          </div>
+
+          <div class="grid-3-col margin-bottom-md">
+            <div class="form-group">
+              <label class="form-label">Quoted Selling Price ($)</label>
+              <input type="number" id="editSellingPrice" class="form-control" placeholder="Empty until entry">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Amount Paid ($)</label>
+              <input type="number" id="editAmountPaid" class="form-control" placeholder="0">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Payment Status</label>
+              <select id="editPaymentStatus" class="form-select">
+                <option value="Unpaid">Unpaid / Invoice Sent</option>
+                <option value="Deposit Received">Deposit Received (50%)</option>
+                <option value="Fully Paid (100%)">Fully Paid (100%)</option>
+                <option value="Stock Listing">Stock Listing</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid-3-col margin-bottom-md">
+            <div class="form-group">
+              <label class="form-label">CAD Version</label>
+              <input type="text" id="editCadVersion" class="form-control">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">PLC Firmware Version</label>
+              <input type="text" id="editPlcVersion" class="form-control">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">BOM Reference #</label>
+              <input type="text" id="editBomRef" class="form-control">
+            </div>
+          </div>
+
+          <div class="grid-2-col margin-bottom-md">
+            <div class="form-group">
+              <label class="form-label">Production Start Date</label>
+              <input type="date" id="editStartDate" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Est. Production Finish Date</label>
+              <input type="date" id="editEstFinishDate" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="flex-end gap-sm">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('editMachineModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">💾 Save Machine Edits</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSPECTION DEEP-DIVE MODAL -->
+  <div id="machineDetailModal" class="modal-overlay">
+    <div class="modal-container large">
+      <div class="modal-header">
+        <div>
+          <span id="mdlLocBadge" class="badge badge-warning">Stage</span>
+          <h3 id="mdlMachineTitle" class="section-title" style="display:inline-block; margin-left:8px;">Serial</h3>
+          <p id="mdlSerialSub" class="section-subtitle">Machine overview and specs</p>
+        </div>
+        <div class="inline-flex gap-sm align-center">
+          <button class="btn btn-primary btn-sm" onclick="printMachineReport()" title="Print Full PDF Spec Sheet">
+            🖨️ Print PDF Report
+          </button>
+          <button class="btn btn-secondary btn-sm admin-only" onclick="openEditMachineModal(currentMachineId)" title="Edit Machine Information">
+            ✏️ Edit Info
+          </button>
+          <button class="close-btn" onclick="closeModal('machineDetailModal')">&times;</button>
+        </div>
+      </div>
+
+      <!-- MODAL NAVIGATION TABS -->
+      <div class="modal-nav-tabs">
+        <button class="mdl-tab active" data-tab="overview" onclick="switchModalTab('overview')">📍 Stage Stepper & Dates</button>
+        <button class="mdl-tab" data-tab="engineering" onclick="switchModalTab('engineering')">⚙️ Engineering (CAD/PLC/BOM)</button>
+        <button class="mdl-tab" data-tab="history" onclick="switchModalTab('history')">📜 Status History Log</button>
+        <button class="mdl-tab" data-tab="photos" onclick="switchModalTab('photos')">📷 Photo Gallery</button>
+        <button class="mdl-tab" data-tab="testform" onclick="switchModalTab('testform')">☑️ Quality Inspection & FAT</button>
+        <button class="mdl-tab" data-tab="service" onclick="switchModalTab('service')">🛠️ Service & Modifications</button>
+        <button class="mdl-tab" data-tab="shipping" onclick="switchModalTab('shipping')">🚚 Shipping & Packages</button>
+        <button class="mdl-tab" data-tab="documents" onclick="switchModalTab('documents')">💳 Financials & Documents</button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- TAB 1: OVERVIEW & STAGE STEPPER -->
+        <div id="tab-overview" class="tab-pane active">
+          <div class="grid-2-col margin-bottom-md">
+            <div class="card-box">
+              <div class="card-box-title">📍 Production & Shipping Lifecycle Progress</div>
+              <div id="mdlStageStepper" class="stage-stepper">
+                <!-- Dynamically rendered by app.js -->
+              </div>
+
+              <div class="admin-only margin-top-md bg-darker card-box">
+                <div class="card-box-title" style="font-size:0.85rem;">🔄 Transition Machine Stage</div>
+                <div class="grid-2-col margin-bottom-sm">
+                  <div class="form-group">
+                    <label class="form-label">New Lifecycle Stage</label>
+                    <select id="mdlStageSelect" class="form-select">
+                      <option value="In Production / Fabrication">In Production / Fabrication</option>
+                      <option value="Stock - Turkey">Stock - Turkey Warehouse</option>
+                      <option value="Stock - USA">Stock - USA Warehouse</option>
+                      <option value="Shipping to Customer (from Turkey)">Shipping to Customer (from Turkey)</option>
+                      <option value="Shipping to Customer (from USA)">Shipping to Customer (from USA)</option>
+                      <option value="Delivered to Customer">Delivered to Customer</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Effective Date</label>
+                    <input type="date" id="mdlStageDateInput" class="form-control">
+                  </div>
+                </div>
+                <div class="form-group margin-bottom-sm">
+                  <label class="form-label">Stage Update Note</label>
+                  <input type="text" id="mdlStageNoteInput" class="form-control" placeholder="e.g. Completed FAT testing in Gebze. Transferred to Stock.">
+                </div>
+                <button class="btn btn-primary btn-sm width-100" onclick="updateMachineStageFromModal()">
+                  Update Machine Status
+                </button>
+              </div>
+            </div>
+
+            <div class="card-box">
+              <div class="card-box-title">📅 Timeline & Specification Dates</div>
+              <div class="date-list margin-bottom-md">
+                <div class="date-item">
+                  <span class="date-lbl">Serial Number:</span>
+                  <span id="dtMdlSerial" class="date-val font-code text-highlight"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Customer / Owner:</span>
+                  <span id="dtMdlCustomer" class="date-val"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Invoice Number:</span>
+                  <span id="dtMdlInvoiceNo" class="date-val font-code"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Sales Order Number:</span>
+                  <span id="dtMdlOrderNo" class="date-val font-code"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Production Start Date:</span>
+                  <span id="dtMdlStart" class="date-val font-code"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Est. Production Finish Date:</span>
+                  <div class="inline-flex gap-sm align-center">
+                    <span id="dtMdlEstFinish" class="date-val font-code text-highlight"></span>
+                    <button class="btn btn-secondary btn-sm admin-only" onclick="quickEditEstFinishDateModal()" style="padding:1px 6px; font-size:0.7rem;">✏️ Edit</button>
+                  </div>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Actual Finish Date:</span>
+                  <span id="dtMdlActualFinish" class="date-val font-code"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Warehouse Location:</span>
+                  <span id="dtMdlWarehouse" class="date-val"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Shipment Date:</span>
+                  <span id="dtMdlShipDate" class="date-val font-code"></span>
+                </div>
+              </div>
+
+              <!-- Notes & Comments -->
+              <div class="card-box bg-darker">
+                <div class="card-box-title" style="font-size:0.85rem;">📝 Machine Notes Log</div>
+                <div id="mdlNotesList" style="max-height: 180px; overflow-y: auto;"></div>
+                <div class="margin-top-sm flex-between gap-sm">
+                  <input type="text" id="inputNoteText" class="form-control" placeholder="Add engineering or client note...">
+                  <button class="btn btn-secondary btn-sm" onclick="addMachineNote()">Add</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: ENGINEERING SPECS (CAD, PLC & BOM) -->
+        <div id="tab-engineering" class="tab-pane">
+          <div class="grid-2-col margin-bottom-md">
+            <div class="card-box">
+              <div class="card-box-title">⚙️ Firmware & CAD Specification Versions</div>
+              <div class="date-list margin-bottom-md">
+                <div class="date-item">
+                  <span class="date-lbl">CAD Model Version:</span>
+                  <span id="engCadVersion" class="date-val font-code text-highlight"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">PLC Firmware Version:</span>
+                  <span id="engPlcVersion" class="date-val font-code text-highlight"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Bill of Materials (BOM) Ref #:</span>
+                  <span id="engBomRef" class="date-val font-code"></span>
+                </div>
+              </div>
+
+              <div class="admin-only card-box bg-darker">
+                <div class="card-box-title" style="font-size:0.85rem;">✏️ Update Technical Specs</div>
+                <div class="form-group margin-bottom-sm">
+                  <label class="form-label">CAD Model Version</label>
+                  <input type="text" id="inputEngCad" class="form-control font-code" placeholder="Empty until entry">
+                </div>
+                <div class="form-group margin-bottom-sm">
+                  <label class="form-label">PLC Firmware Version</label>
+                  <input type="text" id="inputEngPlc" class="form-control font-code" placeholder="Empty until entry">
+                </div>
+                <div class="form-group margin-bottom-sm">
+                  <label class="form-label">BOM Reference #</label>
+                  <input type="text" id="inputEngBom" class="form-control font-code" placeholder="Empty until entry">
+                </div>
+                <button class="btn btn-primary btn-sm width-100 margin-top-sm" onclick="saveEngineeringSpecs()">
+                  💾 Save Engineering Specs
+                </button>
+              </div>
+            </div>
+
+            <!-- BOM Files Vault -->
+            <div class="card-box">
+              <div class="card-box-title">📄 Bill of Materials (BOM) Excel / PDF Attachments</div>
+              
+              <div class="admin-only card-box bg-darker margin-bottom-md">
+                <div class="form-group margin-bottom-sm">
+                  <label class="form-label">Upload BOM File (PDF / Excel)</label>
+                  <input type="file" id="uploadBomFileInput" class="form-control" accept=".pdf,.xls,.xlsx,.csv">
+                </div>
+                <button class="btn btn-secondary btn-sm width-100" onclick="handleUploadBomFile()">
+                  📤 Attach BOM File to Machine
+                </button>
+              </div>
+
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>BOM File Name</th>
+                      <th>Size</th>
+                      <th>Upload Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="mdlBomFilesBody">
+                    <!-- Dynamically rendered by app.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: STATUS HISTORY LOG -->
+        <div id="tab-history" class="tab-pane">
+          <div class="section-header">
+            <div>
+              <h4 class="card-box-title">📜 Chronological Status Transition Log</h4>
+              <p class="subtext">Recorded dates when machine moved between fabrication, turkey stock, USA stock, and customer</p>
+            </div>
+            <button class="btn btn-secondary btn-sm admin-only" onclick="toggleAddManualStatusForm()">
+              ✏️ + Add Manual Historical Entry
+            </button>
+          </div>
+
+          <!-- MANUAL STATUS ENTRY FORM -->
+          <div id="manualStatusForm" class="card-box bg-darker margin-bottom-md admin-only" style="display: none;">
+            <div class="card-box-title" style="font-size:0.85rem;">➕ Add Custom Historical Status Entry</div>
+            <div class="grid-3-col margin-bottom-sm">
+              <div class="form-group">
+                <label class="form-label">Lifecycle Stage</label>
+                <select id="manualStageSelect" class="form-select">
+                  <option value="In Production / Fabrication">In Production / Fabrication</option>
+                  <option value="Stock - Turkey">Stock - Turkey Warehouse</option>
+                  <option value="Stock - USA">Stock - USA Warehouse</option>
+                  <option value="Shipping to Customer (from Turkey)">Shipping to Customer (from Turkey)</option>
+                  <option value="Shipping to Customer (from USA)">Shipping to Customer (from USA)</option>
+                  <option value="Delivered to Customer">Delivered to Customer</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Effective Date</label>
+                <input type="date" id="manualStageDate" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Stage Note / Description</label>
+                <input type="text" id="manualStageNote" class="form-control" placeholder="e.g. Cleared customs at Istanbul port.">
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="saveManualStatusEntry()">
+              ✨ Insert Log Entry
+            </button>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Stage / Location</th>
+                  <th>Effective Date</th>
+                  <th>Stage Note</th>
+                  <th>Logged By</th>
+                  <th class="admin-only">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="mdlStatusHistoryBody">
+                <!-- Dynamically rendered by app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 4: PHOTO GALLERY -->
+        <div id="tab-photos" class="tab-pane">
+          <div class="section-header">
+            <div>
+              <h4 class="card-box-title">📷 Machine Production Photo Gallery</h4>
+              <p class="subtext">Upload and inspect high-resolution photos of nozzles, emitters, high voltage supply, and packaging</p>
+            </div>
+            <span id="photoGalleryCount" class="badge badge-purple">0 photos</span>
+          </div>
+
+          <!-- PHOTO UPLOADER BOX -->
+          <div class="card-box bg-darker margin-bottom-md">
+            <div class="grid-3-col">
+              <div class="form-group">
+                <label class="form-label">Photo Category</label>
+                <select id="uploadPhotoCategory" class="form-select">
+                  <option value="Fabrication & Wiring">Fabrication & Wiring</option>
+                  <option value="High Voltage Supply">High Voltage Supply</option>
+                  <option value="Syringe Pump & Emitter">Syringe Pump & Emitter</option>
+                  <option value="FAT Testing">FAT Testing</option>
+                  <option value="Box & Crate Packaging">Box & Crate Packaging</option>
+                  <option value="Customer Installation">Customer Installation</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Select Photo File (JPG / PNG)</label>
+                <input type="file" id="uploadPhotoInput" class="form-control" accept="image/*">
+              </div>
+
+              <div class="form-group align-self-end">
+                <button class="btn btn-primary width-100" onclick="handleUploadMachinePhoto()">
+                  📤 Upload Photo to Gallery
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="mdlPhotoGalleryGrid" class="photo-gallery-grid">
+            <!-- Dynamically rendered by app.js -->
+          </div>
+        </div>
+
+        <!-- TAB 5: FAT QUALITY INSPECTION & TEST FILES -->
+        <div id="tab-testform" class="tab-pane">
+          <div class="grid-2-col margin-bottom-md">
+            <!-- FAT Checklist -->
+            <div class="card-box">
+              <div class="flex-between margin-bottom-sm">
+                <div class="card-box-title">☑️ Factory Acceptance Test (FAT) Checklist</div>
+                <span id="qcOverallBadge" class="badge badge-warning">IN INSPECTION</span>
+              </div>
+              
+              <div id="qcChecklistGrid" class="qc-checklist-grid margin-bottom-md">
+                <!-- Dynamically rendered by app.js -->
+              </div>
+
+              <button class="btn btn-primary btn-sm width-100" onclick="completeQCTestForm()">
+                ✓ Sign Off Complete FAT Checklist
+              </button>
+            </div>
+
+            <!-- FAT Test Form PDF Upload Vault -->
+            <div class="card-box">
+              <div class="flex-between margin-bottom-sm">
+                <div class="card-box-title">📋 FAT Test Form & Certificate Documents</div>
+                <span id="testFormFilesCount" class="badge badge-purple">0 test files</span>
+              </div>
+
+              <div class="card-box bg-darker margin-bottom-md">
+                <div class="form-group margin-bottom-sm">
+                  <label class="form-label">Test File Category</label>
+                  <select id="uploadTestFormCategory" class="form-select">
+                    <option value="Signed FAT Test Form PDF">Signed FAT Test Form PDF</option>
+                    <option value="High Voltage Insulation Certificate">High Voltage Insulation Certificate</option>
+                    <option value="Flow Calibration Log">Flow Calibration Log</option>
+                    <option value="Nanofiber Sample Inspection Report">Nanofiber Sample Inspection Report</option>
+                  </select>
+                </div>
+
+                <div class="form-group margin-bottom-sm">
+                  <label class="form-label">Select Test File (PDF / Image)</label>
+                  <input type="file" id="uploadTestFileInput" class="form-control" accept=".pdf,image/*">
+                </div>
+
+                <button class="btn btn-secondary btn-sm width-100" onclick="handleUploadTestFormFile()">
+                  📤 Attach FAT Test File
+                </button>
+              </div>
+
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th>File Name</th>
+                      <th>Size</th>
+                      <th>Upload Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="mdlTestFormFilesBody">
+                    <!-- Dynamically rendered by app.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 6: SERVICE, MAINTENANCE & MODIFICATIONS -->
+        <div id="tab-service" class="tab-pane">
+          <div class="section-header">
+            <div>
+              <h4 class="card-box-title">🛠️ Post-Sale Service, Maintenance & Modifications</h4>
+              <p class="subtext">Track on-site engineer visits, high-voltage component repairs, and nozzle upgrades</p>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="toggleAddServiceForm()">
+              🔧 + Log Service Visit
+            </button>
+          </div>
+
+          <!-- ADD SERVICE VISIT FORM -->
+          <div id="addServiceForm" class="card-box bg-darker margin-bottom-md" style="display: none;">
+            <div class="card-box-title" style="font-size:0.85rem;">🔧 Log Service / Maintenance Visit</div>
+            <div class="grid-3-col margin-bottom-sm">
+              <div class="form-group">
+                <label class="form-label">Service Type</label>
+                <select id="serviceTypeSelect" class="form-select">
+                  <option value="Preventative Maintenance">Preventative Maintenance</option>
+                  <option value="Component Repair / Replacement">Component Repair / Replacement</option>
+                  <option value="Emitter & Nozzle Upgrade">Emitter & Nozzle Upgrade</option>
+                  <option value="PLC Firmware Flash">PLC Firmware Flash</option>
+                  <option value="Emergency On-Site Repair">Emergency On-Site Repair</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Service Date</label>
+                <input type="date" id="serviceDateInput" class="form-control">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Field Engineer Name</label>
+                <input type="text" id="serviceEngineerInput" class="form-control" placeholder="e.g. Eng. Caner Yilmaz">
+              </div>
+            </div>
+
+            <div class="form-group margin-bottom-sm">
+              <label class="form-label">Service Notes & Work Summary</label>
+              <textarea id="serviceNotesInput" class="form-control" rows="2" placeholder="Replaced high voltage diode, recalibrated syringe driver motor..."></textarea>
+            </div>
+
+            <button class="btn btn-primary btn-sm" onclick="saveServiceEntry()">
+              💾 Save Service Record
+            </button>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Service Type</th>
+                  <th>Service Date</th>
+                  <th>Field Engineer</th>
+                  <th>Notes & Work Done</th>
+                  <th class="admin-only">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="mdlServiceHistoryBody">
+                <!-- Dynamically rendered by app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 7: SHIPPING & PACKAGING LISTS -->
+        <div id="tab-shipping" class="tab-pane">
+          <div class="grid-2-col margin-bottom-md">
+            <!-- Shipping Parties & Details -->
+            <div class="card-box">
+              <div class="card-box-title">🚚 Logistics, Freight & Shipping Parties</div>
+              <div class="date-list margin-bottom-md">
+                <div class="date-item">
+                  <span class="date-lbl">Sender Name / Origin:</span>
+                  <span id="shipSenderName" class="date-val"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Recipient Name / Contact:</span>
+                  <span id="shipRecipientName" class="date-val font-code text-highlight"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Recipient Organization:</span>
+                  <span id="shipRecipientOrg" class="date-val"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Freight Carrier:</span>
+                  <span id="shipCarrier" class="date-val"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Tracking Number:</span>
+                  <span id="shipTracking" class="date-val font-code"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Est. Transit Time:</span>
+                  <span id="shipEstTime" class="date-val"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Destination Address:</span>
+                  <span id="shipDestination" class="date-val"></span>
+                </div>
+              </div>
+
+              <div class="card-box bg-darker">
+                <div class="card-box-title" style="font-size:0.85rem;">✏️ Edit Shipping Details</div>
+                <div class="grid-2-col margin-bottom-sm">
+                  <div class="form-group">
+                    <label class="form-label">Sender Name / Origin Hub</label>
+                    <input type="text" id="inputSenderName" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Recipient Name / Tech Lead</label>
+                    <input type="text" id="inputRecipientName" class="form-control">
+                  </div>
+                </div>
+                <div class="grid-3-col margin-bottom-sm">
+                  <div class="form-group">
+                    <label class="form-label">Carrier</label>
+                    <input type="text" id="inputCarrier" class="form-control" placeholder="DHL / Freight">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Tracking Number</label>
+                    <input type="text" id="inputTracking" class="form-control" placeholder="TRK-9001">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Transit Time</label>
+                    <input type="text" id="inputEstTime" class="form-control" placeholder="3 Days">
+                  </div>
+                </div>
+                <button class="btn btn-secondary btn-sm width-100" onclick="saveShippingDetails()">
+                  💾 Save Shipping Parties & Tracking
+                </button>
+              </div>
+            </div>
+
+            <!-- Inside-the-Box Packaging Lists -->
+            <div class="card-box">
+              <div class="card-box-title">📦 Inside-the-Box Packaging Lists PDF</div>
+              
+              <div class="card-box bg-darker margin-bottom-md">
+                <div class="form-group margin-bottom-sm">
+                  <label class="form-label">Upload Inside Box Packaging List (PDF)</label>
+                  <input type="file" id="uploadPackagingListInput" class="form-control" accept=".pdf">
+                </div>
+                <button class="btn btn-secondary btn-sm width-100" onclick="handleUploadPackagingList()">
+                  📤 Attach Packaging List PDF
+                </button>
+              </div>
+
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Packaging List File</th>
+                      <th>Size</th>
+                      <th>Upload Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="mdlPackagingListBody">
+                    <!-- Dynamically rendered by app.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 8: FINANCIALS, INVOICES & DOCUMENTS -->
+        <div id="tab-documents" class="tab-pane">
+          <div class="grid-2-col margin-bottom-md">
+            <div class="card-box">
+              <div class="card-box-title">💳 Invoices, Sales Orders & Pricing</div>
+              <div class="date-list margin-bottom-md">
+                <div class="date-item">
+                  <span class="date-lbl">Invoice Number:</span>
+                  <span id="docInvoiceNo" class="date-val font-code text-highlight"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Sales Order Number:</span>
+                  <span id="docOrderNo" class="date-val font-code"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">PO Reference Number:</span>
+                  <span id="docPONo" class="date-val font-code"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Quotation Number:</span>
+                  <span id="docQuoteNo" class="date-val font-code"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Quoted Selling Price ($):</span>
+                  <span id="docQuoteAmt" class="date-val font-code text-highlight"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Payment Status:</span>
+                  <span id="paymentStatusBadge" class="badge badge-warning">Unpaid</span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Amount Paid ($):</span>
+                  <span id="payAmountPaid" class="date-val font-code text-highlight"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Deposit Received Date:</span>
+                  <span id="payDepositDate" class="date-val font-code"></span>
+                </div>
+                <div class="date-item">
+                  <span class="date-lbl">Final Payment Date:</span>
+                  <span id="payFinalDate" class="date-val font-code"></span>
+                </div>
+              </div>
+
+              <div class="admin-only card-box bg-darker">
+                <div class="card-box-title" style="font-size:0.85rem;">✏️ Update Invoice & Financials</div>
+                <div class="grid-2-col margin-bottom-sm">
+                  <div class="form-group">
+                    <label class="form-label">Invoice Number</label>
+                    <input type="text" id="inputInvoiceNo" class="form-control font-code">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Sales Order Number</label>
+                    <input type="text" id="inputOrderNo" class="form-control font-code">
+                  </div>
+                </div>
+                <div class="grid-3-col margin-bottom-sm">
+                  <div class="form-group">
+                    <label class="form-label">Quoted Price ($)</label>
+                    <input type="number" id="inputSellingPrice" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Payment Status</label>
+                    <select id="inputPaymentStatus" class="form-select">
+                      <option value="Unpaid">Unpaid / Invoice Sent</option>
+                      <option value="Deposit Received">Deposit Received (50%)</option>
+                      <option value="Fully Paid (100%)">Fully Paid (100%)</option>
+                      <option value="Stock Listing">Stock Listing</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Amount Paid ($)</label>
+                    <input type="number" id="inputPayAmount" class="form-control">
+                  </div>
+                </div>
+                <div class="form-group margin-bottom-sm">
+                  <label class="form-label">Payment Transaction Date</label>
+                  <input type="date" id="inputPayDate" class="form-control">
+                </div>
+                <button class="btn btn-primary btn-sm width-100" onclick="savePaymentStatus()">
+                  💾 Save Financial & Payment Status
+                </button>
+              </div>
+            </div>
+
+            <!-- General Document Vault -->
+            <div class="card-box">
+              <div class="flex-between margin-bottom-sm">
+                <div class="card-box-title">📁 Document Vault</div>
+                <span id="docVaultCount" class="badge badge-purple">0 documents</span>
+              </div>
+
+              <div class="card-box bg-darker margin-bottom-md">
+                <div class="form-group margin-bottom-sm">
+                  <label class="form-label">Document Category</label>
+                  <select id="uploadDocCategory" class="form-select">
+                    <option value="Sales Invoice PDF">Sales Invoice PDF</option>
+                    <option value="Customer Purchase Order (PO)">Customer Purchase Order (PO)</option>
+                    <option value="Signed Quotation">Signed Quotation</option>
+                    <option value="Shipping Airway Bill (AWB)">Shipping Airway Bill (AWB)</option>
+                    <option value="CE Safety Certificate">CE Safety Certificate</option>
+                  </select>
+                </div>
+
+                <div class="form-group margin-bottom-sm">
+                  <label class="form-label">Select Document File (PDF / DOC)</label>
+                  <input type="file" id="uploadFileInput" class="form-control" accept=".pdf,.doc,.docx,image/*">
+                </div>
+
+                <button class="btn btn-secondary btn-sm width-100" onclick="handleUploadDocument()">
+                  📤 Upload Document to Vault
+                </button>
+              </div>
+
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th>File Name</th>
+                      <th>Size</th>
+                      <th>Upload Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="mdlDocumentVaultBody">
+                    <!-- Dynamically rendered by app.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPONENT STOCK MODAL -->
+  <div id="addStockModal" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="section-title">+ Add New Component Stock Item</h3>
+        <button class="close-btn" onclick="closeModal('addStockModal')">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <form onsubmit="handleCreateStock(event)">
+          <div class="form-group margin-bottom-sm">
+            <label class="form-label">SKU Code</label>
+            <input type="text" id="newStockSKU" class="form-control font-code" placeholder="e.g. HV-50KV-GEN" required>
+          </div>
+
+          <div class="form-group margin-bottom-sm">
+            <label class="form-label">Component Name</label>
+            <input type="text" id="newStockName" class="form-control" placeholder="e.g. 50kV Precision High Voltage Supply" required>
+          </div>
+
+          <div class="grid-2-col margin-bottom-md">
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <input type="text" id="newStockCat" class="form-control" placeholder="Power Supplies">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Initial Quantity</label>
+              <input type="number" id="newStockQty" class="form-control" value="5" min="1" required>
+            </div>
+          </div>
+
+          <div class="flex-end gap-sm">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('addStockModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">+ Add Stock Item</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPORT & IMPORT GOOGLE SHEETS MODAL -->
+  <div id="exportModal" class="modal-overlay">
+    <div class="modal-container large">
+      <div class="modal-header">
+        <div>
+          <h3 class="section-title">📊 Google Sheets Import & Export Center</h3>
+          <p class="section-subtitle">Backup, restore, and transfer ERP machine tracking data to Google Sheets & Excel</p>
+        </div>
+        <button class="close-btn" onclick="closeModal('exportModal')">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- RESTORE DATA FROM GOOGLE SHEET CSV SECTION -->
+        <div class="card-box bg-darker margin-bottom-md admin-only" style="border: 2px solid var(--primary);">
+          <div class="card-box-title" style="color:var(--primary);">📥 Restore / Import Data from Google Sheet CSV File</div>
+          <p class="subtext margin-bottom-md">
+            Upload an old or exported Google Sheet CSV file to restore machine records, serial numbers, customers, and engineering specs.
+          </p>
+
+          <div class="grid-2-col margin-bottom-sm">
+            <div class="form-group">
+              <label class="form-label">Select Google Sheet CSV File</label>
+              <input type="file" id="importCsvFileInput" class="form-control" accept=".csv">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Import Mode</label>
+              <select id="importModeSelect" class="form-select">
+                <option value="MERGE">Merge & Update Existing Records</option>
+                <option value="OVERWRITE">Overwrite Entire Database</option>
+              </select>
+            </div>
+          </div>
+
+          <button class="btn btn-primary width-100" onclick="handleImportGoogleSheetCSV()">
+            📥 Restore ERP Information from CSV File
+          </button>
+        </div>
+
+        <div class="grid-2-col margin-bottom-md">
+          <div class="card-box">
+            <div class="card-box-title">📊 Export Full Master ERP Data</div>
+            <p class="subtext margin-bottom-sm">Download all machine records, specs, timeline dates, and FAT status in CSV format for Google Sheets.</p>
+            <button class="btn btn-primary width-100" onclick="exportFullERPCSV()">
+              📥 Download Master ERP CSV
+            </button>
+          </div>
+
+          <div class="card-box">
+            <div class="card-box-title">💰 Export Machines Sold Sales Report</div>
+            <p class="subtext margin-bottom-sm">Download dedicated sales, invoice, and payment tracking report for customer orders.</p>
+            <button class="btn btn-secondary width-100" onclick="exportSoldMachinesCSV()">
+              💰 Download Machines Sold CSV
+            </button>
+          </div>
+        </div>
+
+        <div class="card-box bg-darker">
+          <div class="flex-between">
+            <div>
+              <div class="card-box-title" style="font-size:0.95rem;">📋 Copy Tabular Data for Direct Paste into Google Sheets</div>
+              <p class="subtext">Copies formatted TSV text to clipboard so you can open Google Sheets and press Ctrl + V.</p>
+            </div>
+            <button class="btn btn-secondary" onclick="copyDataForGoogleSheets()">
+              📋 Copy to Clipboard (Ctrl + V)
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION POPUP -->
+  <div id="toastNotification" class="toast-notification">
+    <span id="toastText">Action successful</span>
+  </div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
