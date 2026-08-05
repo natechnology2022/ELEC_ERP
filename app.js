@@ -1315,6 +1315,18 @@ function switchView(viewName) {
   const targetView = document.getElementById(`view-${viewName}`);
   if (targetView) targetView.classList.add('active');
 
+  if (viewName === 'master') {
+    resetMasterFilters();
+  } else {
+    renderAllViews();
+  }
+}
+
+function resetMasterFilters() {
+  if (document.getElementById('masterSearchInput')) document.getElementById('masterSearchInput').value = '';
+  if (document.getElementById('filterLocationSelect')) document.getElementById('filterLocationSelect').value = 'ALL';
+  if (document.getElementById('filterPaymentSelect')) document.getElementById('filterPaymentSelect').value = 'ALL';
+  if (document.getElementById('filterYearSelect')) document.getElementById('filterYearSelect').value = 'ALL';
   renderAllViews();
 }
 
