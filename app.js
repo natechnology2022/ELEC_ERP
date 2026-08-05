@@ -1454,6 +1454,7 @@ function resetMasterFilters() {
 
 // --- RENDER VIEWS ---
 function renderAllViews() {
+  populateStageDropdowns();
   renderKPIs();
   renderMasterTable();
   renderSoldMachinesView();
@@ -2302,11 +2303,106 @@ function renderBomFilesTable(m) {
   }
 }
 
+let customStages = [];
+
+function populateStageDropdowns() {
+  const selectIds = ['mdlStageSelect', 'manualStageSelect', 'filterLocationSelect', 'editStage', 'prodTarget'];
+  
+  selectIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const currentVal = el.value;
+
+    if (id === 'mdlStageSelect') {
+      const builtinOpts = [
+        '<option value="Purchase Ordered">Purchase Ordered</option>',
+        '<option value="In Production / Fabrication">In Production / Fabrication</option>',
+        '<option value="Stock - Turkey">Stock - Turkey Warehouse</option>',
+        '<option value="Stock - USA">Stock - USA Warehouse</option>',
+        '<option value="Shipping to Customer (from Turkey)">Shipping to Customer (from Turkey)</option>',
+        '<option value="Shipping to Customer (from USA)">Shipping to Customer (from USA)</option>',
+        '<option value="Delivered to Customer">Delivered to Customer</option>'
+      ];
+
+      const customOpts = customStages.map(s => `<option value="${s}">⭐ ${s}</option>`);
+      const addOpt = '<option value="CUSTOM_NEW" style="font-weight:700; color:var(--primary);">➕ + Add / Type Custom Stage Name...</option>';
+
+      el.innerHTML = [...builtinOpts, ...customOpts, addOpt].join('');
+    } else if (id === 'manualStageSelect') {
+      const builtinOpts = [
+        '<option value="Purchase Ordered">Purchase Ordered</option>',
+        '<option value="In Production / Fabrication">In Production / Fabrication</option>',
+        '<option value="Stock - Turkey">Stock - Turkey Warehouse</option>',
+        '<option value="Stock - USA">Stock - USA Warehouse</option>',
+        '<option value="Shipping to Customer (from Turkey)">Shipping to Customer (from Turkey)</option>',
+        '<option value="Shipping to Customer (from USA)">Shipping to Customer (from USA)</option>',
+        '<option value="Delivered to Customer">Delivered to Customer</option>'
+      ];
+      const customOpts = customStages.map(s => `<option value="${s}">⭐ ${s}</option>`);
+      el.innerHTML = [...builtinOpts, ...customOpts].join('');
+    }
+
+    if (currentVal && Array.from(el.options).some(o => o.value === currentVal)) {
+      el.value = currentVal;
+    }
+  });
+}
+
+async function handleStageSelectChange(selectEl) {
+  if (selectEl.value === 'CUSTOM_NEW') {
+    await promptCreateCustomStage();
+  }
+}
+
+async function promptCreateCustomStage() {
+  if (currentRole !== 'admin') {
+    alert("Only Super Admin can add or edit custom stage names.");
+    if (document.getElementById('mdlStageSelect')) {
+      const m = machines.find(item => item.id === currentMachineId);
+      if (m) document.getElementById('mdlStageSelect').value = m.stage;
+    }
+    return;
+  }
+
+  const customName = await showCustomPrompt(
+    "➕ Create Custom Stage Name",
+    "Enter a custom stage or status name (e.g. Customs Inspection at Port, On-Site Calibration, Servicing):",
+    "Customs Inspection"
+  );
+
+  if (customName && customName.trim() !== '') {
+    const trimmed = customName.trim();
+    if (!customStages.includes(trimmed)) {
+      customStages.push(trimmed);
+      logAuditAction(`Added new custom lifecycle stage: "${trimmed}"`);
+      saveAppState(true, `Add Custom Stage ${trimmed}`);
+      showToast(`Added custom stage: "${trimmed}"`);
+    }
+
+    populateStageDropdowns();
+    if (document.getElementById('mdlStageSelect')) {
+      document.getElementById('mdlStageSelect').value = trimmed;
+    }
+  } else {
+    const m = machines.find(item => item.id === currentMachineId);
+    if (m && document.getElementById('mdlStageSelect')) {
+      document.getElementById('mdlStageSelect').value = m.stage;
+    }
+  }
+}
+
 // --- UPDATE STAGE WITH STAGE NOTE ---
 async function updateMachineStageFromModal() {
   if (currentRole !== 'admin') return;
   const m = machines.find(item => item.id === currentMachineId);
-  const newStage = document.getElementById('mdlStageSelect').value;
+  let newStage = document.getElementById('mdlStageSelect').value;
+
+  if (newStage === 'CUSTOM_NEW') {
+    await promptCreateCustomStage();
+    newStage = document.getElementById('mdlStageSelect').value;
+    if (newStage === 'CUSTOM_NEW') return;
+  }
+
   const customDate = document.getElementById('mdlStageDateInput').value || new Date().toISOString().split('T')[0];
   const stageNote = document.getElementById('mdlStageNoteInput').value || '';
 

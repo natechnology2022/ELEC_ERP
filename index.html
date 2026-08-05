@@ -867,11 +867,16 @@
               </div>
 
               <div class="admin-only margin-top-md bg-darker card-box">
-                <div class="card-box-title" style="font-size:0.85rem;">🔄 Transition Machine Stage</div>
+                <div class="flex-between margin-bottom-xs">
+                  <div class="card-box-title" style="font-size:0.85rem; margin:0;">🔄 Transition Machine Stage</div>
+                  <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:2px 8px;" onclick="promptCreateCustomStage()">
+                    ✏️ + Custom Stage
+                  </button>
+                </div>
                 <div class="grid-2-col margin-bottom-sm">
                   <div class="form-group">
                     <label class="form-label">New Lifecycle Stage</label>
-                    <select id="mdlStageSelect" class="form-select">
+                    <select id="mdlStageSelect" class="form-select" onchange="handleStageSelectChange(this)">
                       <option value="Purchase Ordered">Purchase Ordered</option>
                       <option value="In Production / Fabrication">In Production / Fabrication</option>
                       <option value="Stock - Turkey">Stock - Turkey Warehouse</option>
@@ -879,6 +884,7 @@
                       <option value="Shipping to Customer (from Turkey)">Shipping to Customer (from Turkey)</option>
                       <option value="Shipping to Customer (from USA)">Shipping to Customer (from USA)</option>
                       <option value="Delivered to Customer">Delivered to Customer</option>
+                      <option value="CUSTOM_NEW" style="font-weight:700; color:var(--primary);">➕ + Add / Type Custom Stage Name...</option>
                     </select>
                   </div>
                   <div class="form-group">
