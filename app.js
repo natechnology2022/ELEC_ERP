@@ -1889,6 +1889,81 @@ function deleteUserAccount(idx) {
   showToast(`Deleted user account ${u.email}`);
 }
 
+function toggleAddUserForm() {
+  const el = document.getElementById('addUserFormBox');
+  if (el) {
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    if (el.style.display === 'block') {
+      autoCheckRolePermissions();
+    }
+  }
+}
+
+function autoCheckRolePermissions() {
+  const role = document.getElementById('newUserRoleSelect')?.value;
+  const isSuper = role === 'super_admin' || role === 'admin';
+  const isEng = role === 'engineer';
+  const isSales = role === 'sales';
+
+  if (document.getElementById('permManageUsers')) document.getElementById('permManageUsers').checked = isSuper;
+  if (document.getElementById('permEditMachines')) document.getElementById('permEditMachines').checked = isSuper || isEng;
+  if (document.getElementById('permManageFinance')) document.getElementById('permManageFinance').checked = isSuper || isSales;
+  if (document.getElementById('permManageEng')) document.getElementById('permManageEng').checked = isSuper || isEng;
+  if (document.getElementById('permExportReports')) document.getElementById('permExportReports').checked = true;
+  if (document.getElementById('permClearDb')) document.getElementById('permClearDb').checked = isSuper;
+  if (document.getElementById('newUser2FAToggle')) document.getElementById('newUser2FAToggle').checked = isSuper;
+}
+
+function handleCreateNewUserFromAdmin(e) {
+  e.preventDefault();
+  if (currentRole !== 'admin') return;
+
+  const name = document.getElementById('newUserFullName').value.trim();
+  const email = document.getElementById('newUserEmail').value.trim().toLowerCase();
+  const pass = document.getElementById('newUserPassword').value.trim();
+  const role = document.getElementById('newUserRoleSelect').value;
+  const is2FA = document.getElementById('newUser2FAToggle') ? document.getElementById('newUser2FAToggle').checked : false;
+
+  if (userAccounts.some(u => u.email.toLowerCase() === email)) {
+    showCustomAlert("User Exists", `An account with email "${email}" already exists in the system.`);
+    return;
+  }
+
+  let label = "Super Admin";
+  if (role === "admin") label = "Operations Admin";
+  else if (role === "engineer") label = "Field Engineer";
+  else if (role === "sales") label = "Sales Manager";
+  else if (role === "observer") label = "Guest Observer";
+
+  const newUser = {
+    id: "user_" + Date.now(),
+    fullName: name,
+    email: email,
+    password: pass,
+    role: role === 'super_admin' ? 'admin' : role,
+    roleLabel: label,
+    status: "Active",
+    twoFactorEnabled: is2FA,
+    permissions: {
+      canManageUsers: document.getElementById('permManageUsers')?.checked || false,
+      canEditMachines: document.getElementById('permEditMachines')?.checked || false,
+      canManageFinance: document.getElementById('permManageFinance')?.checked || false,
+      canManageEngineering: document.getElementById('permManageEng')?.checked || false,
+      canExportReports: document.getElementById('permExportReports')?.checked || false,
+      canClearDb: document.getElementById('permClearDb')?.checked || false
+    }
+  };
+
+  userAccounts.push(newUser);
+  logAuditAction(`Created new user account: ${name} (${email}) - ${label}`);
+  saveAppState(true, `Create User ${email}`);
+
+  document.getElementById('newUserForm').reset();
+  toggleAddUserForm();
+  renderUserAccountsTable();
+  showToast(`Created new user account: ${name} (${label})`);
+}
+
 function logAuditAction(msg) {
   const userStr = activeUser ? activeUser.fullName : 'System User';
   const newEntry = {

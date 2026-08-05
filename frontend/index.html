@@ -474,7 +474,7 @@
         <!-- NEW USER REGISTRATION FORM BOX -->
         <div id="addUserFormBox" class="card-box margin-bottom-md bg-darker" style="display: none;">
           <div class="card-box-title">➕ Register New User Account</div>
-          <form onsubmit="handleCreateNewUser(event)">
+          <form id="newUserForm" onsubmit="handleCreateNewUserFromAdmin(event)">
             <div class="grid-3-col margin-bottom-md">
               <div class="form-group">
                 <label class="form-label">Full Name</label>
@@ -497,19 +497,55 @@
 
             <div class="grid-2-col margin-bottom-md">
               <div class="form-group">
-                <label class="form-label">Access Role Permission</label>
-                <select id="newUserRoleSelect" class="form-select" required>
-                  <option value="admin">⚡ Super Admin (Full Edit Access)</option>
-                  <option value="engineer">🔧 Field Engineer (Quality & Service Access)</option>
-                  <option value="sales">💰 Sales Manager (Invoices & Financials)</option>
-                  <option value="observer">👁️ Guest Observer (View Only)</option>
+                <label class="form-label">Access Role Permission Level</label>
+                <select id="newUserRoleSelect" class="form-select" onchange="autoCheckRolePermissions()" required>
+                  <option value="super_admin">⚡ Super Administrator (Full System & User Control)</option>
+                  <option value="admin">🛡️ Operations Admin (Production Launch & Machine Editor)</option>
+                  <option value="engineer">🔧 Field Engineer (Quality Inspection & Service Access)</option>
+                  <option value="sales">💰 Sales & Finance Manager (Invoices & Financials)</option>
+                  <option value="observer">👁️ Guest Observer (Read Only Access)</option>
                 </select>
               </div>
-              <div class="form-group align-self-end">
-                <button type="submit" class="btn btn-primary">
-                  ✨ Save New Account
-                </button>
+
+              <div class="form-group">
+                <label class="form-label">2FA Security Status</label>
+                <div class="inline-flex gap-sm align-center margin-top-xs">
+                  <label class="form-label" style="margin:0; cursor:pointer;">
+                    <input type="checkbox" id="newUser2FAToggle" checked> Enable 2FA Security (Requires 6-Digit Code)
+                  </label>
+                </div>
               </div>
+            </div>
+
+            <!-- RBAC PERMISSIONS SELECTION -->
+            <div class="card-box bg-darker margin-bottom-md">
+              <div class="card-box-title" style="font-size:0.85rem; margin-bottom:0.5rem;">🔑 Module Granular RBAC Permissions</div>
+              <div class="grid-3-col">
+                <label class="subtext" style="color:var(--text-main); cursor:pointer;">
+                  <input type="checkbox" id="permManageUsers" checked> 👥 User Management
+                </label>
+                <label class="subtext" style="color:var(--text-main); cursor:pointer;">
+                  <input type="checkbox" id="permEditMachines" checked> ⚙️ Machine Records
+                </label>
+                <label class="subtext" style="color:var(--text-main); cursor:pointer;">
+                  <input type="checkbox" id="permManageFinance" checked> 💳 Financials & Prices
+                </label>
+                <label class="subtext" style="color:var(--text-main); cursor:pointer;">
+                  <input type="checkbox" id="permManageEng" checked> 🛠️ Engineering Specs
+                </label>
+                <label class="subtext" style="color:var(--text-main); cursor:pointer;">
+                  <input type="checkbox" id="permExportReports" checked> 📊 Export CSV Reports
+                </label>
+                <label class="subtext" style="color:var(--text-main); cursor:pointer;">
+                  <input type="checkbox" id="permClearDb" checked> 🧹 Reset & Clear DB
+                </label>
+              </div>
+            </div>
+
+            <div class="flex-end">
+              <button type="submit" class="btn btn-primary btn-lg">
+                ✨ Create New Account with Permissions
+              </button>
             </div>
           </form>
         </div>

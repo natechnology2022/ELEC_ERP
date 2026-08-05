@@ -1,6 +1,10 @@
 from django.contrib import admin
 from .models import UserAccount, Machine, StatusHistoryLog, ComponentStock, ServiceRecord, AuditLog
 
+admin.site.site_header = "ElectrospinTEK ERP Administration Portal"
+admin.site.site_title = "ElectrospinTEK ERP Admin"
+admin.site.index_title = "System Management & Database Control Center"
+
 class StatusHistoryLogInline(admin.TabularInline):
     model = StatusHistoryLog
     extra = 1
@@ -24,9 +28,27 @@ class MachineAdmin(admin.ModelAdmin):
 
 @admin.register(UserAccount)
 class UserAccountAdmin(admin.ModelAdmin):
-    list_display = ('fullName', 'email', 'role', 'isActive', 'created_at')
-    list_filter = ('role', 'isActive')
+    list_display = (
+        'fullName', 'email', 'role', 'isActive', 
+        'twoFactorEnabled', 'canManageUsers', 'canEditMachines', 
+        'canManageFinance', 'created_at'
+    )
+    list_filter = ('role', 'isActive', 'twoFactorEnabled', 'canManageUsers', 'canEditMachines')
     search_fields = ('fullName', 'email')
+    fieldsets = (
+        ('Account Credentials', {
+            'fields': ('fullName', 'email', 'password', 'role', 'isActive')
+        }),
+        ('Security & 2FA', {
+            'fields': ('twoFactorEnabled', 'lastLogin')
+        }),
+        ('Module RBAC Permissions', {
+            'fields': (
+                'canManageUsers', 'canEditMachines', 'canManageFinance',
+                'canManageEngineering', 'canExportReports', 'canClearDb'
+            )
+        }),
+    )
 
 
 @admin.register(ComponentStock)
