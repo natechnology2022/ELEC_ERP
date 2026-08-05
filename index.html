@@ -216,6 +216,12 @@
             <p class="section-subtitle">Real-time status tracking, engineering specs, invoices, and FAT quality control</p>
           </div>
           <div class="inline-flex gap-sm">
+            <a href="http://localhost:8000/admin/" target="_blank" class="btn btn-secondary admin-only" title="Open Python Django Admin Portal">
+              🐍 Django Admin Portal
+            </a>
+            <button class="btn btn-secondary" onclick="printMasterDirectory()" title="Print Full Master Machine Directory">
+              🖨️ Print Master Directory
+            </button>
             <button id="btnUndoHeader" class="btn btn-secondary admin-only" onclick="performUndo()" disabled title="Undo last edit (Ctrl + Z)">
               ↩️ Undo Last Action
             </button>
@@ -240,6 +246,7 @@
               <label class="form-label">Location / Stage Filter</label>
               <select id="filterLocationSelect" class="form-select" onchange="applyFilters()">
                 <option value="ALL">All Stages & Locations</option>
+                <option value="Purchase Ordered">Purchase Ordered / Awaiting Fabrication</option>
                 <option value="In Production / Fabrication">In Production / Fabrication</option>
                 <option value="Stock - Turkey">Stock - Turkey Warehouse</option>
                 <option value="Stock - USA">Stock - USA Warehouse</option>
@@ -449,11 +456,16 @@
         <div class="section-header">
           <div>
             <h2 class="section-title">User Permissions & Access Control</h2>
-            <p class="section-subtitle">Manage system user accounts, roles, login credentials, and database operations</p>
+            <p class="section-subtitle">Manage system user accounts, roles, login credentials, and Django Admin access</p>
           </div>
-          <button class="btn btn-primary admin-only" onclick="toggleAddUserForm()">
-            👤 + Add New User Account
-          </button>
+          <div class="inline-flex gap-sm">
+            <a href="http://localhost:8000/admin/" target="_blank" class="btn btn-secondary" title="Open Django Admin Panel">
+              🐍 Django Admin Portal
+            </a>
+            <button class="btn btn-primary admin-only" onclick="toggleAddUserForm()">
+              👤 + Add New User Account
+            </button>
+          </div>
         </div>
 
         <!-- NEW USER REGISTRATION FORM BOX -->
@@ -792,13 +804,13 @@
       <!-- MODAL NAVIGATION TABS -->
       <div class="modal-nav-tabs">
         <button class="mdl-tab active" data-tab="overview" onclick="switchModalTab('overview')">📍 Stage Stepper & Dates</button>
-        <button class="mdl-tab" data-tab="engineering" onclick="switchModalTab('engineering')">⚙️ Engineering (CAD/PLC/BOM)</button>
+        <button class="mdl-tab" data-tab="documents" onclick="switchModalTab('documents')">💳 Financials & Documents</button>
         <button class="mdl-tab" data-tab="history" onclick="switchModalTab('history')">📜 Status History Log</button>
+        <button class="mdl-tab" data-tab="engineering" onclick="switchModalTab('engineering')">⚙️ Engineering (CAD/PLC/BOM)</button>
         <button class="mdl-tab" data-tab="photos" onclick="switchModalTab('photos')">📷 Photo Gallery</button>
         <button class="mdl-tab" data-tab="testform" onclick="switchModalTab('testform')">☑️ Quality Inspection & FAT</button>
         <button class="mdl-tab" data-tab="service" onclick="switchModalTab('service')">🛠️ Service & Modifications</button>
         <button class="mdl-tab" data-tab="shipping" onclick="switchModalTab('shipping')">🚚 Shipping & Packages</button>
-        <button class="mdl-tab" data-tab="documents" onclick="switchModalTab('documents')">💳 Financials & Documents</button>
       </div>
 
       <div class="modal-body">
@@ -807,7 +819,12 @@
         <div id="tab-overview" class="tab-pane active">
           <div class="grid-2-col margin-bottom-md">
             <div class="card-box">
-              <div class="card-box-title">📍 Production & Shipping Lifecycle Progress</div>
+              <div class="flex-between margin-bottom-sm">
+                <div class="card-box-title">📍 Production & Shipping Lifecycle Progress</div>
+                <button id="dtMdlSoldBadge" class="btn btn-secondary btn-sm" onclick="toggleMachineSoldStatusModal()">
+                  📦 UNSOLD STOCK (NO)
+                </button>
+              </div>
               <div id="mdlStageStepper" class="stage-stepper">
                 <!-- Dynamically rendered by app.js -->
               </div>
@@ -818,6 +835,7 @@
                   <div class="form-group">
                     <label class="form-label">New Lifecycle Stage</label>
                     <select id="mdlStageSelect" class="form-select">
+                      <option value="Purchase Ordered">Purchase Ordered / Awaiting Fabrication</option>
                       <option value="In Production / Fabrication">In Production / Fabrication</option>
                       <option value="Stock - Turkey">Stock - Turkey Warehouse</option>
                       <option value="Stock - USA">Stock - USA Warehouse</option>
@@ -1073,35 +1091,25 @@
           </div>
         </div>
 
-        <!-- TAB 5: FAT QUALITY INSPECTION & TEST FILES -->
+        <!-- TAB 6: FAT QUALITY INSPECTION & TEST FILES -->
         <div id="tab-testform" class="tab-pane">
-          <div class="grid-2-col margin-bottom-md">
-            <!-- FAT Checklist -->
-            <div class="card-box">
-              <div class="flex-between margin-bottom-sm">
-                <div class="card-box-title">☑️ Factory Acceptance Test (FAT) Checklist</div>
-                <span id="qcOverallBadge" class="badge badge-warning">IN INSPECTION</span>
+          <div class="card-box">
+            <div class="flex-between margin-bottom-sm">
+              <div>
+                <h4 class="card-box-title">📋 Factory Acceptance Test (FAT) PDF Certificates & Reports</h4>
+                <p class="subtext">Upload and view signed Factory Acceptance Test (FAT) PDFs, calibration certificates, and quality inspection reports</p>
               </div>
-              
-              <div id="qcChecklistGrid" class="qc-checklist-grid margin-bottom-md">
-                <!-- Dynamically rendered by app.js -->
-              </div>
-
-              <button class="btn btn-primary btn-sm width-100" onclick="completeQCTestForm()">
-                ✓ Sign Off Complete FAT Checklist
-              </button>
-            </div>
-
-            <!-- FAT Test Form PDF Upload Vault -->
-            <div class="card-box">
-              <div class="flex-between margin-bottom-sm">
-                <div class="card-box-title">📋 FAT Test Form & Certificate Documents</div>
+              <div class="inline-flex gap-sm align-center">
+                <span id="qcOverallBadge" class="badge badge-warning">⌛ PENDING FAT PDF</span>
                 <span id="testFormFilesCount" class="badge badge-purple">0 test files</span>
               </div>
+            </div>
 
-              <div class="card-box bg-darker margin-bottom-md">
-                <div class="form-group margin-bottom-sm">
-                  <label class="form-label">Test File Category</label>
+            <!-- UPLOADER BOX -->
+            <div class="card-box bg-darker margin-bottom-md">
+              <div class="grid-3-col">
+                <div class="form-group">
+                  <label class="form-label">FAT Document Category</label>
                   <select id="uploadTestFormCategory" class="form-select">
                     <option value="Signed FAT Test Form PDF">Signed FAT Test Form PDF</option>
                     <option value="High Voltage Insulation Certificate">High Voltage Insulation Certificate</option>
@@ -1110,32 +1118,35 @@
                   </select>
                 </div>
 
-                <div class="form-group margin-bottom-sm">
-                  <label class="form-label">Select Test File (PDF / Image)</label>
+                <div class="form-group">
+                  <label class="form-label">Select FAT File (PDF / Image)</label>
                   <input type="file" id="uploadTestFileInput" class="form-control" accept=".pdf,image/*">
                 </div>
 
-                <button class="btn btn-secondary btn-sm width-100" onclick="handleUploadTestFormFile()">
-                  📤 Attach FAT Test File
-                </button>
+                <div class="form-group align-self-end">
+                  <button class="btn btn-primary width-100" onclick="handleUploadTestFormFile()">
+                    📤 Upload FAT PDF Document
+                  </button>
+                </div>
               </div>
+            </div>
 
-              <div class="table-container">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Category</th>
-                      <th>File Name</th>
-                      <th>Size</th>
-                      <th>Upload Date</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="mdlTestFormFilesBody">
-                    <!-- Dynamically rendered by app.js -->
-                  </tbody>
-                </table>
-              </div>
+            <!-- FAT FILES TABLE -->
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>File Name</th>
+                    <th>Size</th>
+                    <th>Upload Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="mdlTestFormFilesBody">
+                  <!-- Dynamically rendered by app.js -->
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -1563,6 +1574,41 @@
   <!-- TOAST NOTIFICATION POPUP -->
   <div id="toastNotification" class="toast-notification">
     <span id="toastText">Action successful</span>
+  </div>
+
+  <!-- CUSTOM SLEEK CONFIRMATION MODAL OVERLAY -->
+  <div id="customConfirmModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 440px; padding: 1.8rem;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem; margin-bottom: 1rem;">
+        <h3 id="customConfirmTitle" class="modal-title" style="color: var(--primary); font-size: 1.25rem;">⚠️ Confirmation</h3>
+      </div>
+      <div class="modal-body" style="padding: 0;">
+        <p id="customConfirmMessage" style="font-size: 0.95rem; color: #fff; line-height: 1.5; margin-bottom: 1.5rem;">Are you sure?</p>
+        <div class="flex-end gap-sm">
+          <button id="customConfirmCancelBtn" class="btn btn-secondary btn-sm" style="min-width: 90px;">Cancel</button>
+          <button id="customConfirmOkBtn" class="btn btn-primary btn-sm" style="min-width: 100px;">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CUSTOM SLEEK TEXT PROMPT INPUT MODAL OVERLAY -->
+  <div id="customPromptModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 460px; padding: 1.8rem;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem; margin-bottom: 1rem;">
+        <h3 id="customPromptTitle" class="modal-title" style="color: var(--primary); font-size: 1.25rem;">✏️ Input Details</h3>
+      </div>
+      <div class="modal-body" style="padding: 0;">
+        <p id="customPromptMessage" style="font-size: 0.95rem; color: #fff; line-height: 1.5; margin-bottom: 0.8rem;"></p>
+        <div class="form-group margin-bottom-md">
+          <input type="text" id="customPromptInput" class="form-control" style="width: 100%; font-size: 0.95rem;">
+        </div>
+        <div class="flex-end gap-sm">
+          <button id="customPromptCancelBtn" class="btn btn-secondary btn-sm" style="min-width: 90px;">Cancel</button>
+          <button id="customPromptOkBtn" class="btn btn-primary btn-sm" style="min-width: 100px;">Submit</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Application Logic -->

@@ -5,8 +5,9 @@
    ========================================================================== */
 
 const LIFECYCLE_STAGES = [
-  "In Production / Fabrication",
   "Stock - Turkey",
+  "Purchase Ordered",
+  "In Production / Fabrication",
   "Stock - USA",
   "Shipping to Customer (from Turkey)",
   "Shipping to Customer (from USA)",
@@ -2756,22 +2757,35 @@ function switchModalTab(tabName) {
 
 function renderModalStageStepper(m) {
   const stepper = document.getElementById('mdlStageStepper');
-  const currentIdx = LIFECYCLE_STAGES.indexOf(m.stage);
+  if (!stepper) return;
 
   stepper.innerHTML = LIFECYCLE_STAGES.map((stg, i) => {
-    let statusClass = '';
-    if (i < currentIdx) statusClass = 'completed';
-    else if (i === currentIdx) statusClass = 'current';
-
+    const isCurrent = (m.stage === stg);
     const histEntry = (m.statusHistory || []).find(h => h.stage === stg);
-    const dateText = histEntry ? `Effective Date: ${histEntry.date}` : (i === currentIdx ? 'Active Location / Status' : 'Upcoming');
+    const isHistory = !!histEntry;
+
+    let statusClass = 'not-active';
+    let badgeText = '⚪ Not Active';
+    if (isCurrent) {
+      statusClass = 'current';
+      badgeText = '📍 Active Location';
+    } else if (isHistory) {
+      statusClass = 'history';
+      badgeText = '📅 Recorded History';
+    }
+
+    const dateText = histEntry ? `Logged: ${histEntry.date}` : (isCurrent ? 'Current Active Stage' : 'No Recorded Date');
 
     return `
-      <div class="step-item ${statusClass}">
-        <div class="step-num">${i < currentIdx ? '✓' : i + 1}</div>
-        <div class="step-info">
-          <div class="step-name">${stg}</div>
-          <div class="step-date">${dateText}</div>
+      <div class="step-item ${statusClass}" style="margin-bottom:8px; padding:8px 12px; background:var(--bg-darker); border-radius:6px; border:1px solid ${isCurrent ? 'var(--primary)' : 'var(--border-color)'};">
+        <div class="step-info" style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div class="step-name" style="font-weight:700; color:${isCurrent ? 'var(--primary)' : 'var(--text-main)'};">${stg}</div>
+            <div class="step-date" style="font-size:0.75rem; color:var(--text-muted);">${dateText}</div>
+          </div>
+          <span class="badge ${isCurrent ? 'badge-warning' : (isHistory ? 'badge-purple' : 'badge-secondary')}" style="font-size:0.75rem;">
+            ${badgeText}
+          </span>
         </div>
       </div>
     `;
@@ -2782,28 +2796,29 @@ function renderModalStageStepper(m) {
 
   const dateInput = document.getElementById('mdlStageDateInput');
   if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+
+  const soldBadge = document.getElementById('dtMdlSoldBadge');
+  if (soldBadge) {
+    const isSold = !m.isStockOrder && m.salesYear !== 'UNSOLD_STOCK';
+    soldBadge.textContent = isSold ? '✅ MACHINE SOLD (YES)' : '📦 UNSOLD STOCK (NO)';
+    soldBadge.className = `btn btn-sm ${isSold ? 'btn-primary' : 'btn-secondary'}`;
+  }
 }
 
-// Render QC Checklist
 function renderQCChecklist(m) {
   const grid = document.getElementById('qcChecklistGrid');
   const badge = document.getElementById('qcOverallBadge');
 
+  const testFiles = m.testFormFiles || [];
+  const hasUploadedPdf = testFiles.length > 0;
+
   if (badge) {
-    badge.textContent = m.qcPassed ? '✓ FAT TEST PASSED' : '⌛ IN INSPECTION';
-    badge.className = `badge ${m.qcPassed ? 'badge-success' : 'badge-warning'}`;
+    badge.textContent = hasUploadedPdf ? '✓ FAT PDF UPLOADED' : '⌛ PENDING FAT PDF';
+    badge.className = `badge ${hasUploadedPdf ? 'badge-success' : 'badge-warning'}`;
   }
 
-  grid.innerHTML = (m.qcChecklist || []).map(qc => `
-    <div class="qc-item">
-      <span class="qc-item-text">${qc.text}</span>
-      <button class="badge ${qc.passed ? 'badge-success' : 'badge-secondary'}"
-              style="cursor:pointer;"
-              onclick="toggleQCCheckitem('${qc.id}')">
-        ${qc.passed ? '✓ PASSED' : '⌛ PENDING'}
-      </button>
-    </div>
-  `).join('');
+  if (!grid) return;
+  grid.innerHTML = '';
 }
 
 function toggleQCCheckitem(qcId) {
@@ -3115,4 +3130,216 @@ function handleCreateStock(e) {
 
 function closeModal(modalId) {
   document.getElementById(modalId).classList.remove('active');
+}
+
+// --- CUSTOM HIGH-CONTRAST CONFIRMATION MODAL HELPER ---
+function showCustomConfirm(title, message) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('customConfirmModal');
+    const titleEl = document.getElementById('customConfirmTitle');
+    const msgEl = document.getElementById('customConfirmMessage');
+    const okBtn = document.getElementById('customConfirmOkBtn');
+    const cancelBtn = document.getElementById('customConfirmCancelBtn');
+
+    if (!modal || !titleEl || !msgEl || !okBtn || !cancelBtn) {
+      resolve(confirm(message));
+      return;
+    }
+
+    titleEl.textContent = title || '⚠️ Confirmation';
+    msgEl.textContent = message || 'Are you sure you want to proceed?';
+
+    modal.classList.add('active');
+
+    function onOk() {
+      cleanup();
+      resolve(true);
+    }
+
+    function onCancel() {
+      cleanup();
+      resolve(false);
+    }
+
+    function cleanup() {
+      modal.classList.remove('active');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+    }
+
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+  });
+}
+
+// --- CUSTOM TEXT INPUT PROMPT MODAL HELPER ---
+function showCustomPrompt(title, message, defaultValue = '') {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('customPromptModal');
+    const titleEl = document.getElementById('customPromptTitle');
+    const msgEl = document.getElementById('customPromptMessage');
+    const inputEl = document.getElementById('customPromptInput');
+    const okBtn = document.getElementById('customPromptOkBtn');
+    const cancelBtn = document.getElementById('customPromptCancelBtn');
+
+    if (!modal || !titleEl || !msgEl || !inputEl || !okBtn || !cancelBtn) {
+      resolve(prompt(message, defaultValue));
+      return;
+    }
+
+    titleEl.textContent = title || '✏️ Input Details';
+    msgEl.textContent = message || 'Please enter details:';
+    inputEl.value = defaultValue || '';
+
+    modal.classList.add('active');
+    setTimeout(() => { inputEl.focus(); inputEl.select(); }, 100);
+
+    function onOk() {
+      const val = inputEl.value;
+      cleanup();
+      resolve(val);
+    }
+
+    function onCancel() {
+      cleanup();
+      resolve(null);
+    }
+
+    function cleanup() {
+      modal.classList.remove('active');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+    }
+
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+  });
+}
+
+// --- TOGGLE MACHINE SOLD STATUS MODAL HELPER ---
+async function toggleMachineSoldStatusModal() {
+  if (currentRole !== 'admin') return;
+  const m = machines.find(item => item.id === currentMachineId);
+  if (!m) return;
+
+  const currentSold = !m.isStockOrder && m.salesYear !== 'UNSOLD_STOCK';
+  const newSold = !currentSold;
+
+  const confirmed = await showCustomConfirm(
+    "Toggle Machine Sold Status",
+    `Change "${m.serial}" status to ${newSold ? 'SOLD CUSTOMER MACHINE' : 'UNSOLD STOCK MACHINE'}?`
+  );
+
+  if (confirmed) {
+    m.isStockOrder = !newSold;
+    m.salesYear = newSold ? (m.salesYear === 'UNSOLD_STOCK' || !m.salesYear ? new Date().getFullYear().toString() : m.salesYear) : 'UNSOLD_STOCK';
+    if (!newSold) {
+      m.customer = 'Production for Stock (Unsold)';
+      m.paymentStatus = 'Stock Listing';
+    } else if (m.customer === 'Production for Stock (Unsold)' || !m.customer) {
+      const custName = await showCustomPrompt("Customer Name", "Enter Customer / Owner Name for this machine:", "Biomedical Research Lab");
+      if (custName) m.customer = custName;
+      m.paymentStatus = 'Fully Paid (100%)';
+      if (!m.amountPaid || m.amountPaid === 0) m.amountPaid = m.quoteAmount || 250000;
+    }
+
+    logAuditAction(`Toggled sold status for ${m.serial} to ${newSold ? 'SOLD' : 'UNSOLD'}`);
+    saveAppState(true, `Toggle Sold Status ${m.serial}`);
+    openMachineDetailModal(currentMachineId);
+    renderAllViews();
+    showToast(`Updated ${m.serial} to ${newSold ? 'SOLD' : 'UNSOLD STOCK'}`);
+  }
+}
+
+// --- PRINT MASTER MACHINE DIRECTORY REPORT ---
+function getFilteredMachines() {
+  const searchInput = document.getElementById('masterSearchInput');
+  const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
+  const locSelect = document.getElementById('filterLocationSelect');
+  const locVal = locSelect ? locSelect.value : 'ALL';
+  const paySelect = document.getElementById('filterPaymentSelect');
+  const payVal = paySelect ? paySelect.value : 'ALL';
+
+  return machines.filter(m => {
+    const matchesSearch = !searchVal || 
+      (m.serial && m.serial.toLowerCase().includes(searchVal)) ||
+      (m.model && m.model.toLowerCase().includes(searchVal)) ||
+      (m.customer && m.customer.toLowerCase().includes(searchVal)) ||
+      (m.invoiceNo && m.invoiceNo.toLowerCase().includes(searchVal)) ||
+      (m.poNo && m.poNo.toLowerCase().includes(searchVal));
+
+    const matchesLoc = (locVal === 'ALL') || (m.stage === locVal);
+    const matchesPay = (payVal === 'ALL') || (m.paymentStatus === payVal);
+
+    return matchesSearch && matchesLoc && matchesPay;
+  });
+}
+
+function printMasterDirectory() {
+  const filtered = getFilteredMachines();
+  const printWin = window.open('', '_blank', 'width=1100,height=850');
+  
+  const rowsHtml = filtered.map((m, idx) => `
+    <tr>
+      <td style="padding:6px; border:1px solid #ccc; font-weight:bold;">${idx + 1}</td>
+      <td style="padding:6px; border:1px solid #ccc; font-weight:bold;">${m.serial}</td>
+      <td style="padding:6px; border:1px solid #ccc;">${m.model}</td>
+      <td style="padding:6px; border:1px solid #ccc;">${m.customer}</td>
+      <td style="padding:6px; border:1px solid #ccc;"><span style="font-weight:bold; color:#000;">${m.stage}</span></td>
+      <td style="padding:6px; border:1px solid #ccc;">${!m.isStockOrder && m.salesYear !== 'UNSOLD_STOCK' ? '✅ SOLD' : '📦 STOCK'}</td>
+      <td style="padding:6px; border:1px solid #ccc;">${m.prodStartDate || '—'}</td>
+      <td style="padding:6px; border:1px solid #ccc;">${m.prodEstFinishDate || 'Pending'}</td>
+      <td style="padding:6px; border:1px solid #ccc;">$${(m.amountPaid || 0).toLocaleString()}</td>
+    </tr>
+  `).join('');
+
+  const reportHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>ElectrospinTEK - Master Machine Directory Report</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; color: #000; font-size: 12px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+        .title { font-size: 20px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #eee; text-align: left; padding: 6px; border: 1px solid #000; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div>
+          <div class="title">ElectrospinTEK - Master Machine Directory</div>
+          <div>Total Active Records: <strong>${filtered.length} machines</strong></div>
+        </div>
+        <div style="text-align:right;">
+          <div>Generated Date: ${new Date().toISOString().split('T')[0]}</div>
+          <div>Authorized User: ${activeUser ? activeUser.fullName : 'Super Admin'}</div>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Serial #</th>
+            <th>Model Name</th>
+            <th>Customer / Owner</th>
+            <th>Current Stage / Location</th>
+            <th>Status</th>
+            <th>Start Date</th>
+            <th>Est. Finish</th>
+            <th>Amount Paid</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+      <script>window.onload = function() { window.print(); }</script>
+    </body>
+    </html>
+  `;
+
+  printWin.document.write(reportHtml);
+  printWin.document.close();
 }
