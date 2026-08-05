@@ -1341,7 +1341,7 @@ function renderKPIs() {
   const inUSA = machines.filter(m => m.stage === 'Stock - USA').length;
   document.getElementById('kpiUSAStockCount').textContent = inUSA;
 
-  const soldCount = machines.filter(m => !m.isStockOrder && m.customer && !m.customer.includes('Stock')).length;
+  const soldCount = machines.filter(m => m.isSold === true || (!m.isStockOrder && m.customer && !m.customer.toLowerCase().includes('stock') && m.paymentStatus !== 'Stock Listing')).length;
   document.getElementById('kpiSold2026Count').textContent = soldCount;
 }
 
@@ -1465,7 +1465,7 @@ function renderSoldMachinesView() {
   const tbody = document.getElementById('soldMachinesTableBody');
   if (!tbody) return;
 
-  const soldList = machines.filter(m => !m.isStockOrder && m.customer && !m.customer.toLowerCase().includes('stock'));
+  const soldList = machines.filter(m => m.isSold === true || (!m.isStockOrder && m.customer && !m.customer.toLowerCase().includes('stock') && m.paymentStatus !== 'Stock Listing'));
 
   let totalRevenue = 0;
   let totalCashCollected = 0;
@@ -1684,14 +1684,16 @@ function quickFilterYear(yr) {
 }
 
 // --- EDIT MACHINE MODAL CONTROLS WITH CONFIRMATION ---
-function openEditMachineModal(machineId) {
+async function openEditMachineModal(machineId) {
   if (currentRole !== 'admin') return;
   const m = machines.find(item => item.id === machineId);
   if (!m) return;
 
-  if (!confirm(`Are you sure you want to EDIT information for ElectrospinTEK machine "${m.serial}" (${m.model})?`)) {
-    return;
-  }
+  const confirmed = await showCustomConfirm(
+    "Edit Machine Information",
+    `Are you sure you want to EDIT information for ElectrospinTEK machine <strong>"${m.serial}"</strong> (${m.model})?`
+  );
+  if (!confirmed) return;
 
   document.getElementById('editMachineId').value = m.id;
   document.getElementById('editSerial').value = m.serial || '';
@@ -1772,14 +1774,55 @@ function handleSaveEditedMachine(e) {
   showToast(`Updated machine information for ${newSerial}`);
 }
 
+// --- SLEEK CUSTOM CONFIRMATION MODAL HELPER ---
+let confirmResolver = null;
+
+function showCustomConfirm(title, message, isDanger = false, confirmBtnText = '✓ Confirm Action') {
+  return new Promise((resolve) => {
+    confirmResolver = resolve;
+
+    const modal = document.getElementById('customConfirmModal');
+    const titleEl = document.getElementById('confirmModalTitle');
+    const msgEl = document.getElementById('confirmModalMessage');
+    const iconEl = document.getElementById('confirmModalIcon');
+    const okBtn = document.getElementById('confirmOkBtn');
+
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.innerHTML = message;
+    if (iconEl) iconEl.textContent = isDanger ? '⚠️' : '❓';
+
+    if (okBtn) {
+      okBtn.textContent = confirmBtnText;
+      okBtn.className = `btn ${isDanger ? 'btn-danger' : 'btn-primary'}`;
+    }
+
+    if (modal) modal.classList.add('active');
+  });
+}
+
+function resolveCustomConfirm(result) {
+  const modal = document.getElementById('customConfirmModal');
+  if (modal) modal.classList.remove('active');
+  if (confirmResolver) {
+    confirmResolver(result);
+    confirmResolver = null;
+  }
+}
+
 // --- CONFIRMATION FOR DELETE MACHINE RECORD ---
-function confirmDeleteMachine(machineId) {
+async function confirmDeleteMachine(machineId) {
   if (currentRole !== 'admin') return;
   const targetId = machineId || currentMachineId;
   const m = machines.find(item => item.id === targetId);
   if (!m) return;
 
-  if (confirm(`⚠️ CONFIRM DELETE: Are you sure you want to permanently DELETE ElectrospinTEK machine "${m.serial}" (${m.model})?\n\n(This action can be undone using Ctrl + Z)`)) {
+  const confirmed = await showCustomConfirm(
+    "⚠️ Permanent Machine Deletion",
+    `Are you sure you want to permanently DELETE ElectrospinTEK machine <strong style="color:var(--danger);">${m.serial}</strong> (${m.model})?<br><br><span class="subtext">(This action can be undone using Ctrl + Z)</span>`,
+    true,
+    "🗑️ Permanently Delete Machine"
+  );
+  if (confirmed) {
     machines = machines.filter(item => item.id !== targetId);
     logAuditAction(`Deleted machine record ${m.serial} (${m.model})`);
     saveAppState(true, `Delete Machine ${m.serial}`);
@@ -1790,14 +1833,16 @@ function confirmDeleteMachine(machineId) {
 }
 
 // --- ENGINEERING SPECS (CAD, PLC & BOM) LOGIC ---
-function saveEngineeringSpecs() {
+async function saveEngineeringSpecs() {
   if (currentRole !== 'admin') return;
   const m = machines.find(item => item.id === currentMachineId);
   if (!m) return;
 
-  if (!confirm(`Save changes to technical engineering specs for ${m.serial}?`)) {
-    return;
-  }
+  const confirmed = await showCustomConfirm(
+    "Save Technical Engineering Specs",
+    `Save changes to technical engineering specs (CAD, PLC, BOM) for machine <strong>${m.serial}</strong>?`
+  );
+  if (!confirmed) return;
 
   m.cadVersion = document.getElementById('inputEngCad').value || m.cadVersion;
   m.plcVersion = document.getElementById('inputEngPlc').value || m.plcVersion;
@@ -1852,7 +1897,7 @@ function handleUploadBomFile() {
   reader.readAsDataURL(file);
 }
 
-function removeBomFile(bomId) {
+async function removeBomFile(bomId) {
   if (currentRole !== 'admin') return;
   const m = machines.find(item => item.id === currentMachineId);
   if (!m || !m.bomFiles) return;
@@ -1860,7 +1905,13 @@ function removeBomFile(bomId) {
   const b = m.bomFiles.find(item => item.id === bomId);
   const name = b ? b.fileName : 'file';
 
-  if (confirm(`⚠️ CONFIRM DELETE: Are you sure you want to delete BOM file "${name}"?`)) {
+  const confirmed = await showCustomConfirm(
+    "⚠️ Remove BOM File",
+    `Are you sure you want to delete BOM file <strong>"${name}"</strong> from machine <strong>${m.serial}</strong>?`,
+    true,
+    "🗑️ Delete File"
+  );
+  if (confirmed) {
     m.bomFiles = m.bomFiles.filter(item => item.id !== bomId);
     logAuditAction(`Removed BOM file from machine ${m.serial}`);
     saveAppState(true, `Remove BOM File`);
@@ -1909,7 +1960,7 @@ function renderBomFilesTable(m) {
 }
 
 // --- UPDATE STAGE WITH STAGE NOTE ---
-function updateMachineStageFromModal() {
+async function updateMachineStageFromModal() {
   if (currentRole !== 'admin') return;
   const m = machines.find(item => item.id === currentMachineId);
   const newStage = document.getElementById('mdlStageSelect').value;
@@ -1917,9 +1968,11 @@ function updateMachineStageFromModal() {
   const stageNote = document.getElementById('mdlStageNoteInput').value || '';
 
   if (m) {
-    if (!confirm(`Update status for ${m.serial} to "${newStage}" with effective date ${customDate}?`)) {
-      return;
-    }
+    const confirmed = await showCustomConfirm(
+      "Confirm Stage Transition",
+      `Are you sure you want to update stage for <strong>${m.serial}</strong> to <span style="color:var(--primary); font-weight:700;">"${newStage}"</span> on date <strong>${customDate}</strong>?`
+    );
+    if (!confirmed) return;
 
     const oldStage = m.stage;
     m.stage = newStage;
@@ -1984,22 +2037,71 @@ function saveManualStatusEntry() {
   showToast(`Manual status entry added for ${m.serial}`);
 }
 
-function editStatusHistoryEntry(index) {
+// --- SLEEK CUSTOM TEXT INPUT PROMPT MODAL HELPER ---
+let promptResolver = null;
+
+function showCustomPrompt(title, label, defaultValue = '') {
+  return new Promise((resolve) => {
+    promptResolver = resolve;
+
+    const modal = document.getElementById('customPromptModal');
+    const titleEl = document.getElementById('promptModalTitle');
+    const labelEl = document.getElementById('promptModalLabel');
+    const inputEl = document.getElementById('promptModalInput');
+
+    if (titleEl) titleEl.textContent = title;
+    if (labelEl) labelEl.textContent = label;
+    if (inputEl) {
+      inputEl.value = defaultValue;
+      setTimeout(() => inputEl.focus(), 100);
+    }
+
+    if (modal) modal.classList.add('active');
+  });
+}
+
+function handleCustomPromptSubmit(e) {
+  e.preventDefault();
+  const inputEl = document.getElementById('promptModalInput');
+  const val = inputEl ? inputEl.value.trim() : '';
+  resolveCustomPrompt(val);
+}
+
+function resolveCustomPrompt(val) {
+  const modal = document.getElementById('customPromptModal');
+  if (modal) modal.classList.remove('active');
+  if (promptResolver) {
+    promptResolver(val);
+    promptResolver = null;
+  }
+}
+
+async function editStatusHistoryEntry(index) {
   if (currentRole !== 'admin') return;
   const m = machines.find(item => item.id === currentMachineId);
   if (!m || !m.statusHistory || !m.statusHistory[index]) return;
 
   const entry = m.statusHistory[index];
   
-  if (!confirm(`Are you sure you want to EDIT status entry "${entry.stage}"?`)) {
-    return;
-  }
+  const confirmed = await showCustomConfirm(
+    "Edit Status Log Entry",
+    `Are you sure you want to edit status history entry for stage <strong>"${entry.stage}"</strong>?`
+  );
+  if (!confirmed) return;
 
-  const newDate = prompt(`Edit effective date for stage "${entry.stage}":`, entry.date);
-  const newNote = prompt(`Edit stage note for "${entry.stage}":`, entry.note || '');
+  const newDate = await showCustomPrompt(
+    "Edit Effective Date",
+    `Edit effective date for stage "${entry.stage}":`,
+    entry.date
+  );
 
   if (newDate && newDate.trim() !== '') {
     entry.date = newDate.trim();
+    const newNote = await showCustomPrompt(
+      "Edit Stage Note",
+      `Edit stage note for "${entry.stage}":`,
+      entry.note || ''
+    );
     if (newNote !== null) entry.note = newNote.trim();
     logAuditAction(`Edited status history for ${m.serial} (${entry.stage}) date:${entry.date}`);
     saveAppState(true, `Edit Status History for ${m.serial}`);
@@ -2010,12 +2112,19 @@ function editStatusHistoryEntry(index) {
   }
 }
 
-function deleteStatusHistoryEntry(index) {
+async function deleteStatusHistoryEntry(index) {
   if (currentRole !== 'admin') return;
   const m = machines.find(item => item.id === currentMachineId);
   if (!m || !m.statusHistory || !m.statusHistory[index]) return;
 
-  if (confirm(`⚠️ CONFIRM DELETE: Delete status history entry "${m.statusHistory[index].stage}" (${m.statusHistory[index].date})?`)) {
+  const entry = m.statusHistory[index];
+  const confirmed = await showCustomConfirm(
+    "⚠️ Delete Status Log Entry",
+    `Are you sure you want to delete status entry <strong>"${entry.stage}"</strong> (${entry.date}) from machine <strong>${m.serial}</strong>?`,
+    true,
+    "🗑️ Delete Entry"
+  );
+  if (confirmed) {
     const removed = m.statusHistory.splice(index, 1)[0];
     logAuditAction(`Deleted status history entry "${removed.stage}" from ${m.serial}`);
     saveAppState(true, `Delete Status History Entry`);
@@ -2053,6 +2162,47 @@ function renderStatusHistoryTable(m) {
   if (history.length === 0) {
     tbody.innerHTML = `<tr><td colspan="5" class="subtext" style="text-align:center;">No status transitions recorded yet.</td></tr>`;
   }
+}
+
+// --- MACHINE SALE STATUS TOGGLE (YES / NO) ---
+async function toggleMachineSoldStatusModal() {
+  if (currentRole !== 'admin' && currentRole !== 'sales') {
+    alert("Role restriction: Only Super Admin and Sales Lead can toggle Sold status.");
+    return;
+  }
+  const m = machines.find(item => item.id === currentMachineId || item.serial === currentMachineId);
+  if (!m) return;
+
+  const currentIsSold = m.isSold === true || (!m.isStockOrder && m.customer && !m.customer.toLowerCase().includes('stock') && m.paymentStatus !== 'Stock Listing');
+  const newIsSold = !currentIsSold;
+
+  m.isSold = newIsSold;
+  if (newIsSold) {
+    m.isStockOrder = false;
+    if (m.paymentStatus === 'Stock Listing') {
+      m.paymentStatus = 'Unpaid';
+    }
+    if (!m.customer || m.customer.toLowerCase().includes('stock')) {
+      const custInput = await showCustomPrompt(
+        "Enter Customer Name",
+        "Enter Customer / Owner Name for this Sold Machine:",
+        "Customer Nanofiber Lab"
+      );
+      if (custInput) m.customer = custInput;
+    }
+    logAuditAction(`Marked machine ${m.serial} as SOLD (YES). Amount Paid: $${(m.amountPaid || 0).toLocaleString()}`);
+    showToast(`Marked ${m.serial} as SOLD! Included in Machines Sold page.`);
+  } else {
+    m.isSold = false;
+    m.isStockOrder = true;
+    m.paymentStatus = 'Stock Listing';
+    logAuditAction(`Marked machine ${m.serial} as UNSOLD STOCK (NO).`);
+    showToast(`Marked ${m.serial} as Unsold Stock.`);
+  }
+
+  saveAppState(true, `Toggle Sold Status for ${m.serial}`);
+  openMachineDetailModal(currentMachineId);
+  renderAllViews();
 }
 
 // --- DELIVERY & INSTALLATION & SERVICE LOGIC ---
@@ -2110,12 +2260,18 @@ function saveServiceEntry() {
   showToast(`Logged service record for ${m.serial}`);
 }
 
-function deleteServiceEntry(srvId) {
+async function deleteServiceEntry(srvId) {
   if (currentRole !== 'admin') return;
   const m = machines.find(item => item.id === currentMachineId);
   if (!m || !m.serviceHistory) return;
 
-  if (confirm("⚠️ CONFIRM DELETE: Are you sure you want to delete this service record?")) {
+  const confirmed = await showCustomConfirm(
+    "⚠️ Delete Service Record",
+    `Are you sure you want to delete this service record from machine <strong>${m.serial}</strong>?`,
+    true,
+    "🗑️ Delete Service Record"
+  );
+  if (confirmed) {
     m.serviceHistory = m.serviceHistory.filter(s => s.id !== srvId);
     logAuditAction(`Deleted service record from machine ${m.serial}`);
     saveAppState(true, `Delete Service Record`);
@@ -2362,30 +2518,13 @@ function renderPackagingLists(m) {
 }
 
 // --- PAYMENT & INVOICE FINANCIAL MANAGEMENT ---
-async function savePaymentStatus() {
+function savePaymentStatus() {
   if (currentRole !== 'admin' && currentRole !== 'sales') return;
   const m = machines.find(item => item.id === currentMachineId);
   if (!m) return;
 
-  const confirmed = await showCustomConfirm(
-    "Save Financial & Sold Status",
-    `Save sales invoice, machine sold status, and payment details for ${m.serial}?`
-  );
-
-  if (!confirmed) return;
-
-  const isSoldChoice = document.getElementById('inputIsSoldSelect')?.value === 'YES';
-  m.isStockOrder = !isSoldChoice;
-  m.salesYear = isSoldChoice 
-    ? (m.salesYear === 'UNSOLD_STOCK' || !m.salesYear ? new Date().getFullYear().toString() : m.salesYear)
-    : 'UNSOLD_STOCK';
-
-  if (!isSoldChoice) {
-    m.customer = 'Production for Stock (Unsold)';
-    m.paymentStatus = 'Stock Listing';
-  } else if (m.customer === 'Production for Stock (Unsold)' || !m.customer) {
-    const custName = await showCustomPrompt("Customer Name", "Enter Customer / Owner Name for this sold machine:", "Biomedical Research Lab");
-    if (custName) m.customer = custName;
+  if (!confirm(`Save sales invoice & payment changes for machine ${m.serial}?`)) {
+    return;
   }
 
   m.invoiceNo = document.getElementById('inputInvoiceNo').value || m.invoiceNo;
@@ -2395,22 +2534,19 @@ async function savePaymentStatus() {
   const priceVal = document.getElementById('inputSellingPrice').value;
   const sellingPrice = priceVal !== '' ? parseFloat(priceVal) : (m.quoteAmount || 0);
   const amt = parseFloat(document.getElementById('inputPayAmount').value) || m.amountPaid || 0;
-  const payDate = document.getElementById('inputPayDate').value;
+  const date = document.getElementById('inputPayDate').value || new Date().toISOString().split('T')[0];
 
   m.quoteAmount = sellingPrice;
-  m.amountPaid = amt;
   m.paymentStatus = status;
+  m.amountPaid = amt;
+  if (status === 'Deposit Received') m.paymentDepositDate = date;
+  if (status === 'Fully Paid (100%)') m.paymentFinalDate = date;
 
-  if (payDate) {
-    if (status === 'Deposit Received') m.paymentDepositDate = payDate;
-    if (status === 'Fully Paid (100%)') m.paymentFinalDate = payDate;
-  }
-
-  logAuditAction(`Updated financials for ${m.serial}: Sold=${isSoldChoice ? 'YES' : 'NO'}, Price $${sellingPrice}, Paid $${amt}`);
-  saveAppState(true, `Update Financials for ${m.serial}`);
+  logAuditAction(`Updated financials for ${m.serial}: Inv "${m.invoiceNo}", Ord "${m.orderNo}", Status "${status}", Price $${sellingPrice.toLocaleString()}`);
+  saveAppState(true, `Update Financial Record for ${m.serial}`);
   openMachineDetailModal(currentMachineId);
   renderAllViews();
-  showToast(`Saved financials & sold status for ${m.serial}`);
+  showToast(`Sales invoice & payment status saved`);
 }
 
 // --- GENERAL DOCUMENT UPLOAD HANDLER ---
@@ -2632,10 +2768,21 @@ function renderDocumentVault(m) {
 function renderTestFormFiles(m) {
   const tbody = document.getElementById('mdlTestFormFilesBody');
   const countEl = document.getElementById('testFormFilesCount');
+  const overallBadge = document.getElementById('qcOverallBadge');
   if (!tbody) return;
 
   const testFiles = m.testFormFiles || [];
   if (countEl) countEl.textContent = `${testFiles.length} test file(s) attached`;
+
+  if (overallBadge) {
+    if (testFiles.length > 0 || m.qcPassed) {
+      overallBadge.textContent = '✓ FAT PDF ATTACHED';
+      overallBadge.className = 'badge badge-success';
+    } else {
+      overallBadge.textContent = '⌛ PENDING FAT PDF';
+      overallBadge.className = 'badge badge-warning';
+    }
+  }
 
   tbody.innerHTML = testFiles.map(tf => `
     <tr>
@@ -2679,6 +2826,15 @@ function openMachineDetailModal(machineId) {
   setElText('mdlSerialSub', `Serial: ${m.serial} | Model: ${m.model} | Owner: ${m.customer}`);
 
   // Populate Key Dates & Invoice Details
+  const isSold = m.isSold === true || (!m.isStockOrder && m.customer && !m.customer.toLowerCase().includes('stock') && m.paymentStatus !== 'Stock Listing');
+  m.isSold = isSold;
+
+  const soldBadge = document.getElementById('dtMdlSoldBadge');
+  if (soldBadge) {
+    soldBadge.textContent = isSold ? '✓ SOLD (YES)' : '📦 UNSOLD STOCK (NO)';
+    soldBadge.className = `badge ${isSold ? 'badge-success' : 'badge-secondary'}`;
+  }
+
   setElText('dtMdlSerial', m.serial || '');
   setElText('dtMdlCustomer', m.customer || '');
   setElText('dtMdlInvoiceNo', m.invoiceNo || 'Empty');
@@ -2734,28 +2890,6 @@ function openMachineDetailModal(machineId) {
   renderNotesList(m);
 
   // Financials & Invoices Tab
-  const isSold = !m.isStockOrder && m.salesYear !== 'UNSOLD_STOCK';
-  
-  const docSoldTextStatus = document.getElementById('docSoldTextStatus');
-  if (docSoldTextStatus) docSoldTextStatus.textContent = isSold ? `Sold to ${m.customer || 'Customer'}` : 'Unsold Stock Machine';
-
-  const docSoldBadgeLabel = document.getElementById('docSoldBadgeLabel');
-  if (docSoldBadgeLabel) {
-    docSoldBadgeLabel.textContent = isSold ? 'YES - Machine Sold to Customer' : 'NO - Unsold Stock Machine';
-    docSoldBadgeLabel.className = `badge ${isSold ? 'badge-success' : 'badge-secondary'}`;
-  }
-
-  const docMdlSoldBadge = document.getElementById('docMdlSoldBadge');
-  if (docMdlSoldBadge) {
-    docMdlSoldBadge.textContent = isSold ? '✅ MACHINE SOLD (YES)' : '📦 UNSOLD STOCK (NO)';
-    docMdlSoldBadge.className = `btn btn-sm ${isSold ? 'btn-primary' : 'btn-secondary'}`;
-  }
-
-  const inputIsSoldSelect = document.getElementById('inputIsSoldSelect');
-  if (inputIsSoldSelect) {
-    inputIsSoldSelect.value = isSold ? 'YES' : 'NO';
-  }
-
   setElText('docInvoiceNo', m.invoiceNo || 'Empty');
   setElText('docOrderNo', m.orderNo || 'Empty');
   setElText('docPONo', m.poNo || 'Empty');
@@ -2801,33 +2935,20 @@ function renderModalStageStepper(m) {
   const stepper = document.getElementById('mdlStageStepper');
   if (!stepper) return;
 
-  stepper.innerHTML = LIFECYCLE_STAGES.map((stg, i) => {
-    const isCurrent = (m.stage === stg);
+  stepper.innerHTML = LIFECYCLE_STAGES.map((stg) => {
+    const isCurrent = m.stage === stg;
     const histEntry = (m.statusHistory || []).find(h => h.stage === stg);
-    const isHistory = !!histEntry;
 
-    let statusClass = 'not-active';
-    let badgeText = '⚪ Not Active';
-    if (isCurrent) {
-      statusClass = 'current';
-      badgeText = '📍 Active Location';
-    } else if (isHistory) {
-      statusClass = 'history';
-      badgeText = '📅 Recorded History';
-    }
-
-    const dateText = histEntry ? `Logged: ${histEntry.date}` : (isCurrent ? 'Current Active Stage' : 'No Recorded Date');
+    let statusClass = isCurrent ? 'current' : (histEntry ? 'completed' : '');
+    let iconStr = isCurrent ? '📍' : (histEntry ? '📅' : '⚪');
+    let dateText = isCurrent ? (histEntry ? `Active since: ${histEntry.date}` : 'Active Current Location') : (histEntry ? `Recorded: ${histEntry.date}` : 'Not Active');
 
     return `
-      <div class="step-item ${statusClass}" style="margin-bottom:8px; padding:8px 12px; background:var(--bg-darker); border-radius:6px; border:1px solid ${isCurrent ? 'var(--primary)' : 'var(--border-color)'};">
-        <div class="step-info" style="width:100%; display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <div class="step-name" style="font-weight:700; color:${isCurrent ? 'var(--primary)' : 'var(--text-main)'};">${stg}</div>
-            <div class="step-date" style="font-size:0.75rem; color:var(--text-muted);">${dateText}</div>
-          </div>
-          <span class="badge ${isCurrent ? 'badge-warning' : (isHistory ? 'badge-purple' : 'badge-secondary')}" style="font-size:0.75rem;">
-            ${badgeText}
-          </span>
+      <div class="step-item ${statusClass}" style="margin-bottom: 0.75rem;">
+        <div class="step-num" style="font-size: 1rem;">${iconStr}</div>
+        <div class="step-info">
+          <div class="step-name" style="${isCurrent ? 'color: var(--primary); font-weight: 700;' : ''}">${stg}</div>
+          <div class="step-date">${dateText}</div>
         </div>
       </div>
     `;
@@ -2838,29 +2959,31 @@ function renderModalStageStepper(m) {
 
   const dateInput = document.getElementById('mdlStageDateInput');
   if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
-
-  const soldBadge = document.getElementById('dtMdlSoldBadge');
-  if (soldBadge) {
-    const isSold = !m.isStockOrder && m.salesYear !== 'UNSOLD_STOCK';
-    soldBadge.textContent = isSold ? '✅ MACHINE SOLD (YES)' : '📦 UNSOLD STOCK (NO)';
-    soldBadge.className = `btn btn-sm ${isSold ? 'btn-primary' : 'btn-secondary'}`;
-  }
 }
 
+// Render QC Checklist
 function renderQCChecklist(m) {
   const grid = document.getElementById('qcChecklistGrid');
   const badge = document.getElementById('qcOverallBadge');
 
-  const testFiles = m.testFormFiles || [];
-  const hasUploadedPdf = testFiles.length > 0;
-
   if (badge) {
-    badge.textContent = hasUploadedPdf ? '✓ FAT PDF UPLOADED' : '⌛ PENDING FAT PDF';
-    badge.className = `badge ${hasUploadedPdf ? 'badge-success' : 'badge-warning'}`;
+    const hasFiles = (m.testFormFiles || []).length > 0;
+    badge.textContent = (m.qcPassed || hasFiles) ? '✓ FAT PDF ATTACHED' : '⌛ PENDING FAT PDF';
+    badge.className = `badge ${(m.qcPassed || hasFiles) ? 'badge-success' : 'badge-warning'}`;
   }
 
   if (!grid) return;
-  grid.innerHTML = '';
+
+  grid.innerHTML = (m.qcChecklist || []).map(qc => `
+    <div class="qc-item">
+      <span class="qc-item-text">${qc.text}</span>
+      <button class="badge ${qc.passed ? 'badge-success' : 'badge-secondary'}"
+              style="cursor:pointer;"
+              onclick="toggleQCCheckitem('${qc.id}')">
+        ${qc.passed ? '✓ PASSED' : '⌛ PENDING'}
+      </button>
+    </div>
+  `).join('');
 }
 
 function toggleQCCheckitem(qcId) {
@@ -2876,13 +2999,15 @@ function toggleQCCheckitem(qcId) {
   }
 }
 
-function completeQCTestForm() {
+async function completeQCTestForm() {
   if (currentRole === 'observer') return;
   const m = machines.find(item => item.id === currentMachineId);
   if (m) {
-    if (!confirm(`Sign off Factory Acceptance Test (FAT) checklist for machine ${m.serial}?`)) {
-      return;
-    }
+    const confirmed = await showCustomConfirm(
+      "Sign Off FAT Checklist",
+      `Sign off Factory Acceptance Test (FAT) checklist for machine <strong>${m.serial}</strong>?`
+    );
+    if (!confirmed) return;
     (m.qcChecklist || []).forEach(q => q.passed = true);
     m.qcPassed = true;
     m.qcDate = new Date().toISOString().split('T')[0];
@@ -2895,13 +3020,15 @@ function completeQCTestForm() {
 }
 
 // Shipping Parties Save
-function saveShippingDetails() {
+async function saveShippingDetails() {
   if (currentRole === 'observer') return;
   const m = machines.find(item => item.id === currentMachineId);
   if (m) {
-    if (!confirm(`Save shipping parties and tracking info for machine ${m.serial}?`)) {
-      return;
-    }
+    const confirmed = await showCustomConfirm(
+      "Save Shipping Details",
+      `Save shipping parties and tracking info for machine <strong>${m.serial}</strong>?`
+    );
+    if (!confirmed) return;
     m.senderName = document.getElementById('inputSenderName').value || m.senderName;
     m.recipientName = document.getElementById('inputRecipientName').value || m.recipientName;
     m.carrier = document.getElementById('inputCarrier').value || m.carrier;
@@ -3172,216 +3299,4 @@ function handleCreateStock(e) {
 
 function closeModal(modalId) {
   document.getElementById(modalId).classList.remove('active');
-}
-
-// --- CUSTOM HIGH-CONTRAST CONFIRMATION MODAL HELPER ---
-function showCustomConfirm(title, message) {
-  return new Promise((resolve) => {
-    const modal = document.getElementById('customConfirmModal');
-    const titleEl = document.getElementById('customConfirmTitle');
-    const msgEl = document.getElementById('customConfirmMessage');
-    const okBtn = document.getElementById('customConfirmOkBtn');
-    const cancelBtn = document.getElementById('customConfirmCancelBtn');
-
-    if (!modal || !titleEl || !msgEl || !okBtn || !cancelBtn) {
-      resolve(confirm(message));
-      return;
-    }
-
-    titleEl.textContent = title || '⚠️ Confirmation';
-    msgEl.textContent = message || 'Are you sure you want to proceed?';
-
-    modal.classList.add('active');
-
-    function onOk() {
-      cleanup();
-      resolve(true);
-    }
-
-    function onCancel() {
-      cleanup();
-      resolve(false);
-    }
-
-    function cleanup() {
-      modal.classList.remove('active');
-      okBtn.removeEventListener('click', onOk);
-      cancelBtn.removeEventListener('click', onCancel);
-    }
-
-    okBtn.addEventListener('click', onOk);
-    cancelBtn.addEventListener('click', onCancel);
-  });
-}
-
-// --- CUSTOM TEXT INPUT PROMPT MODAL HELPER ---
-function showCustomPrompt(title, message, defaultValue = '') {
-  return new Promise((resolve) => {
-    const modal = document.getElementById('customPromptModal');
-    const titleEl = document.getElementById('customPromptTitle');
-    const msgEl = document.getElementById('customPromptMessage');
-    const inputEl = document.getElementById('customPromptInput');
-    const okBtn = document.getElementById('customPromptOkBtn');
-    const cancelBtn = document.getElementById('customPromptCancelBtn');
-
-    if (!modal || !titleEl || !msgEl || !inputEl || !okBtn || !cancelBtn) {
-      resolve(prompt(message, defaultValue));
-      return;
-    }
-
-    titleEl.textContent = title || '✏️ Input Details';
-    msgEl.textContent = message || 'Please enter details:';
-    inputEl.value = defaultValue || '';
-
-    modal.classList.add('active');
-    setTimeout(() => { inputEl.focus(); inputEl.select(); }, 100);
-
-    function onOk() {
-      const val = inputEl.value;
-      cleanup();
-      resolve(val);
-    }
-
-    function onCancel() {
-      cleanup();
-      resolve(null);
-    }
-
-    function cleanup() {
-      modal.classList.remove('active');
-      okBtn.removeEventListener('click', onOk);
-      cancelBtn.removeEventListener('click', onCancel);
-    }
-
-    okBtn.addEventListener('click', onOk);
-    cancelBtn.addEventListener('click', onCancel);
-  });
-}
-
-// --- TOGGLE MACHINE SOLD STATUS MODAL HELPER ---
-async function toggleMachineSoldStatusModal() {
-  if (currentRole !== 'admin') return;
-  const m = machines.find(item => item.id === currentMachineId);
-  if (!m) return;
-
-  const currentSold = !m.isStockOrder && m.salesYear !== 'UNSOLD_STOCK';
-  const newSold = !currentSold;
-
-  const confirmed = await showCustomConfirm(
-    "Toggle Machine Sold Status",
-    `Change "${m.serial}" status to ${newSold ? 'SOLD CUSTOMER MACHINE' : 'UNSOLD STOCK MACHINE'}?`
-  );
-
-  if (confirmed) {
-    m.isStockOrder = !newSold;
-    m.salesYear = newSold ? (m.salesYear === 'UNSOLD_STOCK' || !m.salesYear ? new Date().getFullYear().toString() : m.salesYear) : 'UNSOLD_STOCK';
-    if (!newSold) {
-      m.customer = 'Production for Stock (Unsold)';
-      m.paymentStatus = 'Stock Listing';
-    } else if (m.customer === 'Production for Stock (Unsold)' || !m.customer) {
-      const custName = await showCustomPrompt("Customer Name", "Enter Customer / Owner Name for this machine:", "Biomedical Research Lab");
-      if (custName) m.customer = custName;
-      m.paymentStatus = 'Fully Paid (100%)';
-      if (!m.amountPaid || m.amountPaid === 0) m.amountPaid = m.quoteAmount || 250000;
-    }
-
-    logAuditAction(`Toggled sold status for ${m.serial} to ${newSold ? 'SOLD' : 'UNSOLD'}`);
-    saveAppState(true, `Toggle Sold Status ${m.serial}`);
-    openMachineDetailModal(currentMachineId);
-    renderAllViews();
-    showToast(`Updated ${m.serial} to ${newSold ? 'SOLD' : 'UNSOLD STOCK'}`);
-  }
-}
-
-// --- PRINT MASTER MACHINE DIRECTORY REPORT ---
-function getFilteredMachines() {
-  const searchInput = document.getElementById('masterSearchInput');
-  const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
-  const locSelect = document.getElementById('filterLocationSelect');
-  const locVal = locSelect ? locSelect.value : 'ALL';
-  const paySelect = document.getElementById('filterPaymentSelect');
-  const payVal = paySelect ? paySelect.value : 'ALL';
-
-  return machines.filter(m => {
-    const matchesSearch = !searchVal || 
-      (m.serial && m.serial.toLowerCase().includes(searchVal)) ||
-      (m.model && m.model.toLowerCase().includes(searchVal)) ||
-      (m.customer && m.customer.toLowerCase().includes(searchVal)) ||
-      (m.invoiceNo && m.invoiceNo.toLowerCase().includes(searchVal)) ||
-      (m.poNo && m.poNo.toLowerCase().includes(searchVal));
-
-    const matchesLoc = (locVal === 'ALL') || (m.stage === locVal);
-    const matchesPay = (payVal === 'ALL') || (m.paymentStatus === payVal);
-
-    return matchesSearch && matchesLoc && matchesPay;
-  });
-}
-
-function printMasterDirectory() {
-  const filtered = getFilteredMachines();
-  const printWin = window.open('', '_blank', 'width=1100,height=850');
-  
-  const rowsHtml = filtered.map((m, idx) => `
-    <tr>
-      <td style="padding:6px; border:1px solid #ccc; font-weight:bold;">${idx + 1}</td>
-      <td style="padding:6px; border:1px solid #ccc; font-weight:bold;">${m.serial}</td>
-      <td style="padding:6px; border:1px solid #ccc;">${m.model}</td>
-      <td style="padding:6px; border:1px solid #ccc;">${m.customer}</td>
-      <td style="padding:6px; border:1px solid #ccc;"><span style="font-weight:bold; color:#000;">${m.stage}</span></td>
-      <td style="padding:6px; border:1px solid #ccc;">${!m.isStockOrder && m.salesYear !== 'UNSOLD_STOCK' ? '✅ SOLD' : '📦 STOCK'}</td>
-      <td style="padding:6px; border:1px solid #ccc;">${m.prodStartDate || '—'}</td>
-      <td style="padding:6px; border:1px solid #ccc;">${m.prodEstFinishDate || 'Pending'}</td>
-      <td style="padding:6px; border:1px solid #ccc;">$${(m.amountPaid || 0).toLocaleString()}</td>
-    </tr>
-  `).join('');
-
-  const reportHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>ElectrospinTEK - Master Machine Directory Report</title>
-      <style>
-        body { font-family: Arial, sans-serif; margin: 20px; color: #000; font-size: 12px; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
-        .title { font-size: 20px; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { background: #eee; text-align: left; padding: 6px; border: 1px solid #000; }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <div>
-          <div class="title">ElectrospinTEK - Master Machine Directory</div>
-          <div>Total Active Records: <strong>${filtered.length} machines</strong></div>
-        </div>
-        <div style="text-align:right;">
-          <div>Generated Date: ${new Date().toISOString().split('T')[0]}</div>
-          <div>Authorized User: ${activeUser ? activeUser.fullName : 'Super Admin'}</div>
-        </div>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Serial #</th>
-            <th>Model Name</th>
-            <th>Customer / Owner</th>
-            <th>Current Stage / Location</th>
-            <th>Status</th>
-            <th>Start Date</th>
-            <th>Est. Finish</th>
-            <th>Amount Paid</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rowsHtml}
-        </tbody>
-      </table>
-      <script>window.onload = function() { window.print(); }</script>
-    </body>
-    </html>
-  `;
-
-  printWin.document.write(reportHtml);
-  printWin.document.close();
 }

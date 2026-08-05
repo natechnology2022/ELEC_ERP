@@ -22,9 +22,8 @@ class UserAccount(models.Model):
 
 class Machine(models.Model):
     STAGE_CHOICES = [
-        ('Stock - Turkey', 'Stock - Turkey Warehouse'),
-        ('Purchase Ordered', 'Purchase Ordered / Awaiting Fabrication'),
         ('In Production / Fabrication', 'In Production / Fabrication'),
+        ('Stock - Turkey', 'Stock - Turkey Warehouse'),
         ('Stock - USA', 'Stock - USA Warehouse'),
         ('Shipping to Customer (from Turkey)', 'Shipping to Customer (from Turkey)'),
         ('Shipping to Customer (from USA)', 'Shipping to Customer (from USA)'),

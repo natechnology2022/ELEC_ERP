@@ -219,9 +219,6 @@
             <a href="http://localhost:8000/admin/" target="_blank" class="btn btn-secondary admin-only" title="Open Python Django Admin Portal">
               🐍 Django Admin Portal
             </a>
-            <button class="btn btn-secondary" onclick="printMasterDirectory()" title="Print Full Master Machine Directory">
-              🖨️ Print Master Directory
-            </button>
             <button id="btnUndoHeader" class="btn btn-secondary admin-only" onclick="performUndo()" disabled title="Undo last edit (Ctrl + Z)">
               ↩️ Undo Last Action
             </button>
@@ -246,7 +243,7 @@
               <label class="form-label">Location / Stage Filter</label>
               <select id="filterLocationSelect" class="form-select" onchange="applyFilters()">
                 <option value="ALL">All Stages & Locations</option>
-                <option value="Purchase Ordered">Purchase Ordered / Awaiting Fabrication</option>
+                <option value="Purchase Ordered">Purchase Ordered</option>
                 <option value="In Production / Fabrication">In Production / Fabrication</option>
                 <option value="Stock - Turkey">Stock - Turkey Warehouse</option>
                 <option value="Stock - USA">Stock - USA Warehouse</option>
@@ -578,7 +575,8 @@
             <div class="form-group">
               <label class="form-label">Target Initial Location / Warehouse</label>
               <select id="prodTarget" class="form-select" onchange="toggleCustomerField()">
-                <option value="In Production / Fabrication">In Production / Fabrication (Turkey Facility)</option>
+                <option value="Purchase Ordered">Purchase Ordered / Awaiting Fabrication</option>
+                <option value="In Production / Fabrication">In Production / Fabrication</option>
                 <option value="Stock - Turkey">Stock - Turkey Central Warehouse</option>
                 <option value="Stock - USA">Stock - USA Central Warehouse</option>
               </select>
@@ -694,6 +692,7 @@
             <div class="form-group">
               <label class="form-label">Current Stage & Location</label>
               <select id="editStage" class="form-select" required>
+                <option value="Purchase Ordered">Purchase Ordered</option>
                 <option value="In Production / Fabrication">In Production / Fabrication</option>
                 <option value="Stock - Turkey">Stock - Turkey Warehouse</option>
                 <option value="Stock - USA">Stock - USA Warehouse</option>
@@ -819,12 +818,7 @@
         <div id="tab-overview" class="tab-pane active">
           <div class="grid-2-col margin-bottom-md">
             <div class="card-box">
-              <div class="flex-between margin-bottom-sm">
-                <div class="card-box-title">📍 Production & Shipping Lifecycle Progress</div>
-                <button id="dtMdlSoldBadge" class="btn btn-secondary btn-sm" onclick="toggleMachineSoldStatusModal()">
-                  📦 UNSOLD STOCK (NO)
-                </button>
-              </div>
+              <div class="card-box-title">📍 Machine Stage & Location Status</div>
               <div id="mdlStageStepper" class="stage-stepper">
                 <!-- Dynamically rendered by app.js -->
               </div>
@@ -835,7 +829,7 @@
                   <div class="form-group">
                     <label class="form-label">New Lifecycle Stage</label>
                     <select id="mdlStageSelect" class="form-select">
-                      <option value="Purchase Ordered">Purchase Ordered / Awaiting Fabrication</option>
+                      <option value="Purchase Ordered">Purchase Ordered</option>
                       <option value="In Production / Fabrication">In Production / Fabrication</option>
                       <option value="Stock - Turkey">Stock - Turkey Warehouse</option>
                       <option value="Stock - USA">Stock - USA Warehouse</option>
@@ -862,6 +856,15 @@
             <div class="card-box">
               <div class="card-box-title">📅 Timeline & Specification Dates</div>
               <div class="date-list margin-bottom-md">
+                <div class="date-item">
+                  <span class="date-lbl">Machine Sale Status:</span>
+                  <div class="inline-flex gap-sm align-center">
+                    <span id="dtMdlSoldBadge" class="badge badge-success">✓ SOLD (YES)</span>
+                    <button class="btn btn-secondary btn-sm admin-only" onclick="toggleMachineSoldStatusModal()" style="padding:2px 8px; font-size:0.75rem;" title="Click to toggle machine between Sold (YES) and Unsold Stock (NO)">
+                      🔄 Toggle Sold (YES / NO)
+                    </button>
+                  </div>
+                </div>
                 <div class="date-item">
                   <span class="date-lbl">Serial Number:</span>
                   <span id="dtMdlSerial" class="date-val font-code text-highlight"></span>
@@ -1008,6 +1011,7 @@
               <div class="form-group">
                 <label class="form-label">Lifecycle Stage</label>
                 <select id="manualStageSelect" class="form-select">
+                  <option value="Purchase Ordered">Purchase Ordered</option>
                   <option value="In Production / Fabrication">In Production / Fabrication</option>
                   <option value="Stock - Turkey">Stock - Turkey Warehouse</option>
                   <option value="Stock - USA">Stock - USA Warehouse</option>
@@ -1091,7 +1095,7 @@
           </div>
         </div>
 
-        <!-- TAB 6: FAT QUALITY INSPECTION & TEST FILES -->
+        <!-- TAB 5: FAT QUALITY INSPECTION & TEST FILES -->
         <div id="tab-testform" class="tab-pane">
           <div class="card-box">
             <div class="flex-between margin-bottom-sm">
@@ -1319,35 +1323,12 @@
           </div>
         </div>
 
-        <!-- TAB 2: FINANCIALS, INVOICES & DOCUMENTS -->
+        <!-- TAB 8: FINANCIALS, INVOICES & DOCUMENTS -->
         <div id="tab-documents" class="tab-pane">
           <div class="grid-2-col margin-bottom-md">
             <div class="card-box">
-              <div class="flex-between margin-bottom-sm">
-                <div class="card-box-title">💳 Invoices, Sales Orders & Pricing</div>
-                <button id="docMdlSoldBadge" class="btn btn-primary btn-sm" onclick="toggleMachineSoldStatusModal()">
-                  ✅ MACHINE SOLD (YES)
-                </button>
-              </div>
-
-              <!-- SOLD STATUS HIGHLIGHT BANNER -->
-              <div class="card-box bg-darker margin-bottom-md" style="border: 1px solid var(--primary);">
-                <div class="flex-between align-center">
-                  <div>
-                    <div style="font-weight:700; color:var(--primary); font-size:0.9rem;">💰 Sales ERP Status: <span id="docSoldTextStatus">Machine Sold to Customer</span></div>
-                    <div class="subtext" style="font-size:0.78rem;">Machines marked as SOLD are automatically included in the Machines Sold ERP view & revenue totals.</div>
-                  </div>
-                  <button class="btn btn-secondary btn-sm" onclick="toggleMachineSoldStatusModal()" style="font-size:0.75rem;">
-                    🔄 Change Status
-                  </button>
-                </div>
-              </div>
-
+              <div class="card-box-title">💳 Invoices, Sales Orders & Pricing</div>
               <div class="date-list margin-bottom-md">
-                <div class="date-item">
-                  <span class="date-lbl">Machine Sold Status:</span>
-                  <span id="docSoldBadgeLabel" class="badge badge-success">YES - Machine Sold</span>
-                </div>
                 <div class="date-item">
                   <span class="date-lbl">Invoice Number:</span>
                   <span id="docInvoiceNo" class="date-val font-code text-highlight"></span>
@@ -1388,15 +1369,6 @@
 
               <div class="admin-only card-box bg-darker">
                 <div class="card-box-title" style="font-size:0.85rem;">✏️ Update Invoice & Financials</div>
-                
-                <div class="form-group margin-bottom-sm">
-                  <label class="form-label" style="color:var(--primary); font-weight:700;">Is Machine Sold to Customer?</label>
-                  <select id="inputIsSoldSelect" class="form-select font-code" style="border: 1px solid var(--primary);">
-                    <option value="YES">YES - Machine Sold (Add to Machines Sold Page)</option>
-                    <option value="NO">NO - Unsold Stock Machine</option>
-                  </select>
-                </div>
-
                 <div class="grid-2-col margin-bottom-sm">
                   <div class="form-group">
                     <label class="form-label">Invoice Number</label>
@@ -1603,44 +1575,58 @@
     </div>
   </div>
 
+  <!-- CUSTOM SLEEK CONFIRMATION MODAL -->
+  <div id="customConfirmModal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 480px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
+        <div class="inline-flex gap-sm align-center">
+          <span id="confirmModalIcon" style="font-size: 1.4rem;">⚠️</span>
+          <h3 id="confirmModalTitle" class="section-title" style="margin: 0; font-size: 1.1rem; color: var(--text-main);">Confirm Action</h3>
+        </div>
+        <button class="close-btn" onclick="resolveCustomConfirm(false)">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem 1.25rem;">
+        <div id="confirmModalMessage" style="color: var(--text-main); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem;"></div>
+
+        <div class="flex-end gap-sm">
+          <button id="confirmCancelBtn" class="btn btn-secondary" onclick="resolveCustomConfirm(false)">Cancel</button>
+          <button id="confirmOkBtn" class="btn btn-primary" onclick="resolveCustomConfirm(true)">✓ Confirm Action</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CUSTOM SLEEK INPUT PROMPT MODAL -->
+  <div id="customPromptModal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 500px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
+        <div class="inline-flex gap-sm align-center">
+          <span id="promptModalIcon" style="font-size: 1.4rem;">✍️</span>
+          <h3 id="promptModalTitle" class="section-title" style="margin: 0; font-size: 1.1rem; color: var(--text-main);">Enter Information</h3>
+        </div>
+        <button class="close-btn" onclick="resolveCustomPrompt(null)">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem 1.25rem;">
+        <form onsubmit="handleCustomPromptSubmit(event)">
+          <div class="form-group margin-bottom-md">
+            <label id="promptModalLabel" class="form-label" style="font-size: 0.95rem; margin-bottom: 0.5rem; color: var(--text-main);">Enter Value:</label>
+            <input type="text" id="promptModalInput" class="form-control" style="font-size: 1rem; padding: 0.75rem 1rem;" required autofocus>
+          </div>
+
+          <div class="flex-end gap-sm">
+            <button type="button" class="btn btn-secondary" onclick="resolveCustomPrompt(null)">Cancel</button>
+            <button type="submit" class="btn btn-primary">✓ Save Entry</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST NOTIFICATION POPUP -->
   <div id="toastNotification" class="toast-notification">
     <span id="toastText">Action successful</span>
-  </div>
-
-  <!-- CUSTOM SLEEK CONFIRMATION MODAL OVERLAY -->
-  <div id="customConfirmModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 440px; padding: 1.8rem;">
-      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem; margin-bottom: 1rem;">
-        <h3 id="customConfirmTitle" class="modal-title" style="color: var(--primary); font-size: 1.25rem;">⚠️ Confirmation</h3>
-      </div>
-      <div class="modal-body" style="padding: 0;">
-        <p id="customConfirmMessage" style="font-size: 0.95rem; color: #fff; line-height: 1.5; margin-bottom: 1.5rem;">Are you sure?</p>
-        <div class="flex-end gap-sm">
-          <button id="customConfirmCancelBtn" class="btn btn-secondary btn-sm" style="min-width: 90px;">Cancel</button>
-          <button id="customConfirmOkBtn" class="btn btn-primary btn-sm" style="min-width: 100px;">OK</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- CUSTOM SLEEK TEXT PROMPT INPUT MODAL OVERLAY -->
-  <div id="customPromptModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 460px; padding: 1.8rem;">
-      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.8rem; margin-bottom: 1rem;">
-        <h3 id="customPromptTitle" class="modal-title" style="color: var(--primary); font-size: 1.25rem;">✏️ Input Details</h3>
-      </div>
-      <div class="modal-body" style="padding: 0;">
-        <p id="customPromptMessage" style="font-size: 0.95rem; color: #fff; line-height: 1.5; margin-bottom: 0.8rem;"></p>
-        <div class="form-group margin-bottom-md">
-          <input type="text" id="customPromptInput" class="form-control" style="width: 100%; font-size: 0.95rem;">
-        </div>
-        <div class="flex-end gap-sm">
-          <button id="customPromptCancelBtn" class="btn btn-secondary btn-sm" style="min-width: 90px;">Cancel</button>
-          <button id="customPromptOkBtn" class="btn btn-primary btn-sm" style="min-width: 100px;">Submit</button>
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- Application Logic -->
