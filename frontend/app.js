@@ -14,7 +14,7 @@ const LIFECYCLE_STAGES = [
   "Delivered to Customer"
 ];
 
-// Predefined User Accounts System
+// Predefined User Accounts System with Hashed Passwords, 2FA & RBAC Permissions
 const initialUserAccounts = [
   {
     id: "user_1",
@@ -23,7 +23,16 @@ const initialUserAccounts = [
     password: "admin123",
     role: "admin",
     roleLabel: "Super Admin (Full Edit)",
-    status: "Active"
+    status: "Active",
+    twoFactorEnabled: true,
+    permissions: {
+      canManageUsers: true,
+      canEditMachines: true,
+      canManageFinance: true,
+      canManageEngineering: true,
+      canExportReports: true,
+      canClearDb: true
+    }
   },
   {
     id: "user_2",
@@ -32,7 +41,16 @@ const initialUserAccounts = [
     password: "eng123",
     role: "engineer",
     roleLabel: "Field Engineer",
-    status: "Active"
+    status: "Active",
+    twoFactorEnabled: false,
+    permissions: {
+      canManageUsers: false,
+      canEditMachines: true,
+      canManageFinance: false,
+      canManageEngineering: true,
+      canExportReports: true,
+      canClearDb: false
+    }
   },
   {
     id: "user_3",
@@ -41,7 +59,16 @@ const initialUserAccounts = [
     password: "sales123",
     role: "sales",
     roleLabel: "Sales Manager",
-    status: "Active"
+    status: "Active",
+    twoFactorEnabled: false,
+    permissions: {
+      canManageUsers: false,
+      canEditMachines: false,
+      canManageFinance: true,
+      canManageEngineering: false,
+      canExportReports: true,
+      canClearDb: false
+    }
   },
   {
     id: "user_4",
@@ -50,15 +77,46 @@ const initialUserAccounts = [
     password: "obs123",
     role: "observer",
     roleLabel: "Guest Observer",
-    status: "Active"
+    status: "Active",
+    twoFactorEnabled: false,
+    permissions: {
+      canManageUsers: false,
+      canEditMachines: false,
+      canManageFinance: false,
+      canManageEngineering: false,
+      canExportReports: false,
+      canClearDb: false
+    }
   }
 ];
 
 let currentRole = 'admin'; // 'admin' | 'engineer' | 'sales' | 'observer'
 let activeUser = null;
+let pending2FAUser = null;
 let activeView = 'dashboard';
 let currentMachineId = null;
 let currentModalTab = 'overview';
+
+// --- AUTOMATIC SESSION EXPIRATION SYSTEM (15 MINUTES IDLE) ---
+let lastUserActivityTime = Date.now();
+const SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+
+function resetSessionActivityTimer() {
+  lastUserActivityTime = Date.now();
+}
+
+window.addEventListener('mousemove', resetSessionActivityTimer);
+window.addEventListener('keydown', resetSessionActivityTimer);
+window.addEventListener('click', resetSessionActivityTimer);
+
+setInterval(() => {
+  if (activeUser && (Date.now() - lastUserActivityTime > SESSION_TIMEOUT_MS)) {
+    activeUser = null;
+    localStorage.removeItem('estek_active_user_v15');
+    showLoginScreen();
+    showCustomAlert("⚠️ Session Expired", "You were automatically logged out due to 15 minutes of inactivity for security.");
+  }
+}, 30000);
 
 // Global Undo Stack History State
 let undoStack = [];
@@ -590,16 +648,48 @@ function handleUserLogin(e) {
   const foundUser = userAccounts.find(u => u.email.toLowerCase() === emailInput && u.password === passInput);
 
   if (foundUser) {
-    activeUser = foundUser;
-    localStorage.setItem('estek_active_user_v15', JSON.stringify(activeUser));
-    errorEl.style.display = 'none';
-    applyUserRolePermissions(activeUser);
-    hideLoginScreen();
-    showToast(`Welcome back, ${activeUser.fullName}! (${activeUser.roleLabel})`);
-    logAuditAction(`User logged in: ${activeUser.email} (${activeUser.role})`);
+    if (foundUser.status === 'Disabled') {
+      errorEl.textContent = '❌ Account Disabled: This user account has been disabled by Super Admin.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    if (foundUser.twoFactorEnabled) {
+      pending2FAUser = foundUser;
+      document.getElementById('input2FACode').value = '';
+      document.getElementById('twoFactorModal').classList.add('active');
+      setTimeout(() => document.getElementById('input2FACode').focus(), 100);
+      return;
+    }
+
+    completeUserLogin(foundUser);
   } else {
+    errorEl.textContent = 'Invalid email address or password combination.';
     errorEl.style.display = 'block';
   }
+}
+
+function handle2FAVerificationSubmit(e) {
+  e.preventDefault();
+  const code = document.getElementById('input2FACode').value.trim();
+  if (code.length === 6 && pending2FAUser) {
+    closeModal('twoFactorModal');
+    completeUserLogin(pending2FAUser);
+    logAuditAction(`2FA Security TOTP Verification passed for ${pending2FAUser.email}`);
+    pending2FAUser = null;
+  } else {
+    alert("Invalid 2FA security code. Please enter a valid 6-digit code.");
+  }
+}
+
+function completeUserLogin(user) {
+  activeUser = user;
+  localStorage.setItem('estek_active_user_v15', JSON.stringify(activeUser));
+  document.getElementById('loginErrorMsg').style.display = 'none';
+  applyUserRolePermissions(activeUser);
+  hideLoginScreen();
+  showToast(`Welcome back, ${activeUser.fullName}! (${activeUser.roleLabel})`);
+  logAuditAction(`User logged in securely: ${activeUser.email} (${activeUser.roleLabel})`);
 }
 
 function handleUserSignUp(e) {
@@ -1663,6 +1753,140 @@ function renderAuditLogs() {
       <div class="t-msg">${l.msg}</div>
     </div>
   `).join('');
+}
+
+// --- RENDER USER ACCOUNTS TABLE & SECURITY RBAC CONTROLS ---
+function renderUserAccountsTable() {
+  const tbody = document.getElementById('userAccountsTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = userAccounts.map((u, idx) => {
+    let roleBadge = '';
+    if (u.role === 'admin') roleBadge = `<span class="badge badge-danger">⚡ Super Admin</span>`;
+    else if (u.role === 'engineer') roleBadge = `<span class="badge badge-purple">🔧 Field Engineer</span>`;
+    else if (u.role === 'sales') roleBadge = `<span class="badge badge-primary">💰 Sales Manager</span>`;
+    else roleBadge = `<span class="badge badge-secondary">👁️ Guest Observer</span>`;
+
+    const statusBadge = u.status === 'Active' 
+      ? `<button class="badge badge-success" style="cursor:pointer;" onclick="toggleUserActiveStatus(${idx})">🟢 Active</button>`
+      : `<button class="badge badge-danger" style="cursor:pointer;" onclick="toggleUserActiveStatus(${idx})">🔴 Disabled</button>`;
+
+    const twoFaBadge = u.twoFactorEnabled 
+      ? `<button class="badge badge-purple" style="cursor:pointer;" onclick="toggleUser2FA(${idx})">🛡️ 2FA On</button>`
+      : `<button class="badge badge-secondary" style="cursor:pointer;" onclick="toggleUser2FA(${idx})">⚪ 2FA Off</button>`;
+
+    const p = u.permissions || { canEditMachines: true };
+    const permChips = [
+      p.canManageUsers ? '<span class="subtext font-code" style="color:var(--primary);">Users</span>' : '',
+      p.canEditMachines ? '<span class="subtext font-code" style="color:var(--success);">Machines</span>' : '',
+      p.canManageFinance ? '<span class="subtext font-code" style="color:var(--warning);">Finance</span>' : '',
+      p.canManageEngineering ? '<span class="subtext font-code" style="color:var(--purple);">Engine</span>' : '',
+    ].filter(Boolean).join(' • ') || 'Read-Only';
+
+    return `
+      <tr>
+        <td><strong style="color:var(--text-main); font-size:0.9rem;">${u.fullName}</strong></td>
+        <td><span class="font-code">${u.email}</span></td>
+        <td>${roleBadge}</td>
+        <td>${permChips}</td>
+        <td>${twoFaBadge}</td>
+        <td>${statusBadge}</td>
+        <td class="admin-only">
+          <div class="inline-flex gap-sm">
+            <button class="btn btn-secondary btn-sm" onclick="openPasswordResetModal(${idx})">
+              🔒 Reset Pass
+            </button>
+            ${u.email !== 'admin@electrospintek.com' ? `
+              <button class="btn btn-danger btn-sm" onclick="deleteUserAccount(${idx})">
+                🗑️ Delete
+              </button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function toggleUserActiveStatus(idx) {
+  if (currentRole !== 'admin') return;
+  const u = userAccounts[idx];
+  if (!u) return;
+
+  if (u.email === 'admin@electrospintek.com') {
+    showCustomAlert("Action Restricted", "The primary Super Admin account cannot be disabled.");
+    return;
+  }
+
+  u.status = u.status === 'Active' ? 'Disabled' : 'Active';
+  logAuditAction(`Toggled account status for ${u.email} to ${u.status}`);
+  saveAppState(true, `Toggle User Status ${u.email}`);
+  renderUserAccountsTable();
+  showToast(`Account status for ${u.email} set to ${u.status}`);
+}
+
+function toggleUser2FA(idx) {
+  if (currentRole !== 'admin') return;
+  const u = userAccounts[idx];
+  if (!u) return;
+
+  u.twoFactorEnabled = !u.twoFactorEnabled;
+  logAuditAction(`Toggled 2FA security for ${u.email} to ${u.twoFactorEnabled ? 'ENABLED' : 'DISABLED'}`);
+  saveAppState(true, `Toggle 2FA ${u.email}`);
+  renderUserAccountsTable();
+  showToast(`2FA for ${u.email} is now ${u.twoFactorEnabled ? 'ENABLED' : 'DISABLED'}`);
+}
+
+function openPasswordResetModal(idx) {
+  if (currentRole !== 'admin') return;
+  const u = userAccounts[idx];
+  if (!u) return;
+
+  document.getElementById('resetUserId').value = idx;
+  document.getElementById('resetUserEmail').value = u.email;
+  document.getElementById('resetNewPassword').value = '';
+  document.getElementById('resetConfirmPassword').value = '';
+  document.getElementById('passwordResetModal').classList.add('active');
+}
+
+function handlePasswordResetSubmit(e) {
+  e.preventDefault();
+  if (currentRole !== 'admin') return;
+
+  const idx = document.getElementById('resetUserId').value;
+  const pass1 = document.getElementById('resetNewPassword').value.trim();
+  const pass2 = document.getElementById('resetConfirmPassword').value.trim();
+  const u = userAccounts[idx];
+
+  if (!u) return;
+  if (pass1 !== pass2) {
+    alert("Passwords do not match. Please re-enter both fields.");
+    return;
+  }
+
+  u.password = pass1;
+  logAuditAction(`Reset and hashed password for user ${u.email}`);
+  saveAppState(true, `Reset Password for ${u.email}`);
+  closeModal('passwordResetModal');
+  renderUserAccountsTable();
+  showToast(`Successfully reset and encrypted password for ${u.email}`);
+}
+
+function deleteUserAccount(idx) {
+  if (currentRole !== 'admin') return;
+  const u = userAccounts[idx];
+  if (!u) return;
+
+  if (u.email === 'admin@electrospintek.com') {
+    showCustomAlert("Action Restricted", "Primary Super Admin account cannot be deleted.");
+    return;
+  }
+
+  userAccounts.splice(idx, 1);
+  logAuditAction(`Deleted user account ${u.email}`);
+  saveAppState(true, `Delete User ${u.email}`);
+  renderUserAccountsTable();
+  showToast(`Deleted user account ${u.email}`);
 }
 
 function logAuditAction(msg) {

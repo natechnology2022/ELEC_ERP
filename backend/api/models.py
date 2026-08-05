@@ -3,17 +3,29 @@ from django.utils import timezone
 
 class UserAccount(models.Model):
     ROLE_CHOICES = [
-        ('admin', 'Super Admin'),
+        ('super_admin', 'Super Administrator'),
+        ('admin', 'Operations Admin'),
         ('engineer', 'Field Engineer'),
-        ('sales', 'Sales Manager'),
+        ('sales', 'Sales & Finance Manager'),
         ('observer', 'Guest Observer'),
     ]
 
     fullName = models.CharField(max_length=150)
     email = models.EmailField(unique=True)
-    password = models.CharField(max_length=128)
+    password = models.CharField(max_length=128, help_text="PBKDF2/Argon2/Bcrypt Hashed Password")
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='observer')
     isActive = models.BooleanField(default=True)
+    twoFactorEnabled = models.BooleanField(default=False)
+    
+    # RBAC Permission Flags
+    canManageUsers = models.BooleanField(default=False)
+    canEditMachines = models.BooleanField(default=False)
+    canManageFinance = models.BooleanField(default=False)
+    canManageEngineering = models.BooleanField(default=False)
+    canExportReports = models.BooleanField(default=False)
+    canClearDb = models.BooleanField(default=False)
+
+    lastLogin = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

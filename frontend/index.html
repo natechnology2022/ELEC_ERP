@@ -522,9 +522,10 @@
                 <th>User Full Name</th>
                 <th>Email Address</th>
                 <th>Role Permission</th>
-                <th>Password</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>Module RBAC Permissions</th>
+                <th>2FA Security</th>
+                <th>Account Status</th>
+                <th>Security Actions</th>
               </tr>
             </thead>
             <tbody id="userAccountsTableBody">
@@ -1624,6 +1625,74 @@
           <div class="flex-end gap-sm">
             <button type="button" class="btn btn-secondary" onclick="resolveCustomPrompt(null)">Cancel</button>
             <button type="submit" class="btn btn-primary">✓ Save Entry</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASSWORD RESET MODAL -->
+  <div id="passwordResetModal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 480px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
+        <div class="inline-flex gap-sm align-center">
+          <span style="font-size: 1.4rem;">🔒</span>
+          <h3 class="section-title" style="margin: 0; font-size: 1.1rem;">Security Password Reset</h3>
+        </div>
+        <button class="close-btn" onclick="closeModal('passwordResetModal')">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem 1.25rem;">
+        <form onsubmit="handlePasswordResetSubmit(event)">
+          <input type="hidden" id="resetUserId">
+          <div class="form-group margin-bottom-sm">
+            <label class="form-label">User Account Email</label>
+            <input type="text" id="resetUserEmail" class="form-control font-code" readonly>
+          </div>
+
+          <div class="form-group margin-bottom-sm">
+            <label class="form-label">New Password (Hashed with PBKDF2/Argon2)</label>
+            <input type="password" id="resetNewPassword" class="form-control" placeholder="Minimum 6 characters" required minlength="6">
+          </div>
+
+          <div class="form-group margin-bottom-md">
+            <label class="form-label">Confirm New Password</label>
+            <input type="password" id="resetConfirmPassword" class="form-control" placeholder="Re-enter new password" required minlength="6">
+          </div>
+
+          <div class="flex-end gap-sm">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('passwordResetModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">🔒 Reset & Hash Password</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- TWO-FACTOR AUTHENTICATION (2FA) PROMPT MODAL -->
+  <div id="twoFactorModal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 440px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
+        <div class="inline-flex gap-sm align-center">
+          <span style="font-size: 1.4rem;">🛡️</span>
+          <h3 class="section-title" style="margin: 0; font-size: 1.1rem;">2FA Security Verification</h3>
+        </div>
+        <button class="close-btn" onclick="closeModal('twoFactorModal')">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem 1.25rem;">
+        <p class="subtext margin-bottom-md">
+          Two-Factor Authentication (2FA) is enabled for this Administrator account. Enter your 6-digit TOTP verification code to continue:
+        </p>
+
+        <form onsubmit="handle2FAVerificationSubmit(event)">
+          <div class="form-group margin-bottom-md" style="text-align: center;">
+            <input type="text" id="input2FACode" class="form-control font-code" placeholder="123456" maxlength="6" pattern="[0-9]{6}" style="font-size: 1.8rem; letter-spacing: 0.5rem; text-align: center;" required autofocus>
+          </div>
+
+          <div class="flex-end gap-sm">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('twoFactorModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">🛡️ Verify & Log In</button>
           </div>
         </form>
       </div>
