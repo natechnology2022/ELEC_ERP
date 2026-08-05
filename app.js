@@ -2362,13 +2362,30 @@ function renderPackagingLists(m) {
 }
 
 // --- PAYMENT & INVOICE FINANCIAL MANAGEMENT ---
-function savePaymentStatus() {
+async function savePaymentStatus() {
   if (currentRole !== 'admin' && currentRole !== 'sales') return;
   const m = machines.find(item => item.id === currentMachineId);
   if (!m) return;
 
-  if (!confirm(`Save sales invoice & payment changes for machine ${m.serial}?`)) {
-    return;
+  const confirmed = await showCustomConfirm(
+    "Save Financial & Sold Status",
+    `Save sales invoice, machine sold status, and payment details for ${m.serial}?`
+  );
+
+  if (!confirmed) return;
+
+  const isSoldChoice = document.getElementById('inputIsSoldSelect')?.value === 'YES';
+  m.isStockOrder = !isSoldChoice;
+  m.salesYear = isSoldChoice 
+    ? (m.salesYear === 'UNSOLD_STOCK' || !m.salesYear ? new Date().getFullYear().toString() : m.salesYear)
+    : 'UNSOLD_STOCK';
+
+  if (!isSoldChoice) {
+    m.customer = 'Production for Stock (Unsold)';
+    m.paymentStatus = 'Stock Listing';
+  } else if (m.customer === 'Production for Stock (Unsold)' || !m.customer) {
+    const custName = await showCustomPrompt("Customer Name", "Enter Customer / Owner Name for this sold machine:", "Biomedical Research Lab");
+    if (custName) m.customer = custName;
   }
 
   m.invoiceNo = document.getElementById('inputInvoiceNo').value || m.invoiceNo;
@@ -2378,19 +2395,22 @@ function savePaymentStatus() {
   const priceVal = document.getElementById('inputSellingPrice').value;
   const sellingPrice = priceVal !== '' ? parseFloat(priceVal) : (m.quoteAmount || 0);
   const amt = parseFloat(document.getElementById('inputPayAmount').value) || m.amountPaid || 0;
-  const date = document.getElementById('inputPayDate').value || new Date().toISOString().split('T')[0];
+  const payDate = document.getElementById('inputPayDate').value;
 
   m.quoteAmount = sellingPrice;
-  m.paymentStatus = status;
   m.amountPaid = amt;
-  if (status === 'Deposit Received') m.paymentDepositDate = date;
-  if (status === 'Fully Paid (100%)') m.paymentFinalDate = date;
+  m.paymentStatus = status;
 
-  logAuditAction(`Updated financials for ${m.serial}: Inv "${m.invoiceNo}", Ord "${m.orderNo}", Status "${status}", Price $${sellingPrice.toLocaleString()}`);
-  saveAppState(true, `Update Financial Record for ${m.serial}`);
+  if (payDate) {
+    if (status === 'Deposit Received') m.paymentDepositDate = payDate;
+    if (status === 'Fully Paid (100%)') m.paymentFinalDate = payDate;
+  }
+
+  logAuditAction(`Updated financials for ${m.serial}: Sold=${isSoldChoice ? 'YES' : 'NO'}, Price $${sellingPrice}, Paid $${amt}`);
+  saveAppState(true, `Update Financials for ${m.serial}`);
   openMachineDetailModal(currentMachineId);
   renderAllViews();
-  showToast(`Sales invoice & payment status saved`);
+  showToast(`Saved financials & sold status for ${m.serial}`);
 }
 
 // --- GENERAL DOCUMENT UPLOAD HANDLER ---
@@ -2714,6 +2734,28 @@ function openMachineDetailModal(machineId) {
   renderNotesList(m);
 
   // Financials & Invoices Tab
+  const isSold = !m.isStockOrder && m.salesYear !== 'UNSOLD_STOCK';
+  
+  const docSoldTextStatus = document.getElementById('docSoldTextStatus');
+  if (docSoldTextStatus) docSoldTextStatus.textContent = isSold ? `Sold to ${m.customer || 'Customer'}` : 'Unsold Stock Machine';
+
+  const docSoldBadgeLabel = document.getElementById('docSoldBadgeLabel');
+  if (docSoldBadgeLabel) {
+    docSoldBadgeLabel.textContent = isSold ? 'YES - Machine Sold to Customer' : 'NO - Unsold Stock Machine';
+    docSoldBadgeLabel.className = `badge ${isSold ? 'badge-success' : 'badge-secondary'}`;
+  }
+
+  const docMdlSoldBadge = document.getElementById('docMdlSoldBadge');
+  if (docMdlSoldBadge) {
+    docMdlSoldBadge.textContent = isSold ? '✅ MACHINE SOLD (YES)' : '📦 UNSOLD STOCK (NO)';
+    docMdlSoldBadge.className = `btn btn-sm ${isSold ? 'btn-primary' : 'btn-secondary'}`;
+  }
+
+  const inputIsSoldSelect = document.getElementById('inputIsSoldSelect');
+  if (inputIsSoldSelect) {
+    inputIsSoldSelect.value = isSold ? 'YES' : 'NO';
+  }
+
   setElText('docInvoiceNo', m.invoiceNo || 'Empty');
   setElText('docOrderNo', m.orderNo || 'Empty');
   setElText('docPONo', m.poNo || 'Empty');
