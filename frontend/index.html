@@ -1266,10 +1266,115 @@
 
         <!-- TAB 7: SHIPPING & PACKAGING LISTS -->
         <div id="tab-shipping" class="tab-pane">
+          
+          <!-- MULTI-LEG SHIPMENT & MOVEMENT LOGS CARD -->
+          <div class="card-box margin-bottom-md">
+            <div class="flex-between margin-bottom-sm">
+              <div>
+                <h4 class="card-box-title">🌐 Multi-Leg Shipping & Transfer Movement History</h4>
+                <p class="subtext">Track multiple shipment legs (e.g. Stock Turkey ➔ Stock USA ➔ Customer Facility ➔ Servicing Return)</p>
+              </div>
+              <button class="btn btn-primary btn-sm admin-only" onclick="toggleAddShipmentLegForm()">
+                ➕ Log New Shipment / Transfer Leg
+              </button>
+            </div>
+
+            <!-- ADD NEW SHIPMENT LEG FORM -->
+            <div id="addShipmentLegFormBox" class="card-box bg-darker margin-bottom-md" style="display: none;">
+              <div class="card-box-title" style="font-size:0.85rem;">🚚 Add New Shipment Leg / Transfer Movement</div>
+              
+              <div class="grid-2-col margin-bottom-sm">
+                <div class="form-group">
+                  <label class="form-label">Origin / From Location</label>
+                  <input type="text" id="legOriginInput" class="form-control" list="shipLocationSuggestions" placeholder="e.g. Stock - Turkey (Central Warehouse)">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Destination / To Location</label>
+                  <input type="text" id="legDestinationInput" class="form-control" list="shipLocationSuggestions" placeholder="e.g. Stock - USA (Central Warehouse) / Customer Lab">
+                </div>
+
+                <datalist id="shipLocationSuggestions">
+                  <option value="Stock - Turkey (Central Warehouse)">
+                  <option value="Stock - USA (Houston Hub)">
+                  <option value="Gebze Fabrication Plant, Turkey">
+                  <option value="Customer Facility (Lab)">
+                  <option value="Service & Repairs Hub">
+                </datalist>
+              </div>
+
+              <div class="grid-3-col margin-bottom-sm">
+                <div class="form-group">
+                  <label class="form-label">Shipment Date</label>
+                  <input type="date" id="legShipDateInput" class="form-control">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Freight Carrier</label>
+                  <input type="text" id="legCarrierInput" class="form-control" placeholder="e.g. DHL Express / FedEx / Air Cargo">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Tracking Number / Waybill #</label>
+                  <input type="text" id="legTrackingInput" class="form-control font-code" placeholder="e.g. TRK-TUR-USA-9981">
+                </div>
+              </div>
+
+              <div class="grid-2-col margin-bottom-sm">
+                <div class="form-group">
+                  <label class="form-label">Leg Status</label>
+                  <select id="legStatusSelect" class="form-select">
+                    <option value="In Transit">🚚 In Transit</option>
+                    <option value="Customs Clearance">🛂 Customs Clearance</option>
+                    <option value="Delivered">✓ Delivered to Destination</option>
+                    <option value="Returned / RMA">↩️ Returned to Warehouse (RMA / Maintenance)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Attach Shipping Document / Waybill (PDF / Image)</label>
+                  <input type="file" id="legDocFileInput" class="form-control" accept=".pdf,image/*">
+                </div>
+              </div>
+
+              <div class="form-group margin-bottom-sm">
+                <label class="form-label">Logistics Notes & Manifest Remarks</label>
+                <textarea id="legNotesInput" class="form-control" rows="2" placeholder="e.g. Transferred 2 wooden crates with high voltage modules via air cargo. Custom clearance docs attached."></textarea>
+              </div>
+
+              <div class="flex-end gap-sm">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleAddShipmentLegForm()">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="saveShipmentLegEntry()">
+                  ✨ Save & Add Shipment Leg
+                </button>
+              </div>
+            </div>
+
+            <!-- MULTI-LEG SHIPMENTS TABLE -->
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Shipment Route Leg</th>
+                    <th>Date & Carrier</th>
+                    <th>Tracking #</th>
+                    <th>Status</th>
+                    <th>Waybill Document</th>
+                    <th>Logistics Notes</th>
+                    <th class="admin-only">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="mdlShipmentLegsBody">
+                  <!-- Dynamically rendered by app.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <div class="grid-2-col margin-bottom-md">
             <!-- Shipping Parties & Details -->
             <div class="card-box">
-              <div class="card-box-title">🚚 Logistics, Freight & Shipping Parties</div>
+              <div class="card-box-title">🚚 Logistics, Freight & Primary Shipping Contact</div>
               <div class="date-list margin-bottom-md">
                 <div class="date-item">
                   <span class="date-lbl">Sender Name / Origin:</span>
@@ -1284,11 +1389,11 @@
                   <span id="shipRecipientOrg" class="date-val"></span>
                 </div>
                 <div class="date-item">
-                  <span class="date-lbl">Freight Carrier:</span>
+                  <span class="date-lbl">Primary Freight Carrier:</span>
                   <span id="shipCarrier" class="date-val"></span>
                 </div>
                 <div class="date-item">
-                  <span class="date-lbl">Tracking Number:</span>
+                  <span class="date-lbl">Primary Tracking Number:</span>
                   <span id="shipTracking" class="date-val font-code"></span>
                 </div>
                 <div class="date-item">
@@ -1302,7 +1407,7 @@
               </div>
 
               <div class="card-box bg-darker">
-                <div class="card-box-title" style="font-size:0.85rem;">✏️ Edit Shipping Details</div>
+                <div class="card-box-title" style="font-size:0.85rem;">✏️ Edit Primary Contact Details</div>
                 <div class="grid-2-col margin-bottom-sm">
                   <div class="form-group">
                     <label class="form-label">Sender Name / Origin Hub</label>
@@ -1328,7 +1433,7 @@
                   </div>
                 </div>
                 <button class="btn btn-secondary btn-sm width-100" onclick="saveShippingDetails()">
-                  💾 Save Shipping Parties & Tracking
+                  💾 Save Shipping Contact Info
                 </button>
               </div>
             </div>

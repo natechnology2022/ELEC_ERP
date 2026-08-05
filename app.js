@@ -232,6 +232,38 @@ const initialMachines = [
     photos: [],
     packagingLists: [],
     serviceHistory: [],
+    shipmentLegs: [
+      {
+        id: "leg_01",
+        origin: "Gebze Fabrication Hub, Turkey",
+        destination: "Stock - Turkey (Central Warehouse)",
+        shipDate: "2026-06-14",
+        carrier: "Internal Transport",
+        trackingNo: "INT-TR-901",
+        status: "Delivered",
+        notes: "Transferred after completing Factory Acceptance Testing (FAT)."
+      },
+      {
+        id: "leg_02",
+        origin: "Stock - Turkey (Central Warehouse)",
+        destination: "Stock - USA (Houston Hub)",
+        shipDate: "2026-07-02",
+        carrier: "Turkish Cargo Air Freight",
+        trackingNo: "TK-AIR-889102",
+        status: "Delivered",
+        notes: "Air cargo transport of crate 1 and 2 to Houston warehouse."
+      },
+      {
+        id: "leg_03",
+        origin: "Stock - USA (Houston Hub)",
+        destination: "Bosphorus NanoTech Customer Site",
+        shipDate: "2026-08-02",
+        carrier: "FedEx Freight Express",
+        trackingNo: "TRK-ESTEK-TK88190",
+        status: "In Transit",
+        notes: "Final stage dispatch to customer laboratory site."
+      }
+    ],
     qcChecklist: [{ id: "qc1", text: "High Voltage Safety Test", passed: true }],
     notes: []
   },
@@ -2828,6 +2860,157 @@ function renderPackagingLists(m) {
   }
 }
 
+// --- MULTI-LEG SHIPPING & TRANSFER MOVEMENT HISTORY LOGIC ---
+function toggleAddShipmentLegForm() {
+  const el = document.getElementById('addShipmentLegFormBox');
+  if (el) {
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+function saveShipmentLegEntry() {
+  if (currentRole !== 'admin' && currentRole !== 'engineer' && currentRole !== 'sales') return;
+  const m = machines.find(item => item.id === currentMachineId || item.serial === currentMachineId);
+  if (!m) return;
+
+  const origin = document.getElementById('legOriginInput').value.trim();
+  const destination = document.getElementById('legDestinationInput').value.trim();
+  const shipDate = document.getElementById('legShipDateInput').value || new Date().toISOString().split('T')[0];
+  const carrier = document.getElementById('legCarrierInput').value.trim() || 'Internal Logistics';
+  const trackingNo = document.getElementById('legTrackingInput').value.trim() || '—';
+  const status = document.getElementById('legStatusSelect').value;
+  const notes = document.getElementById('legNotesInput').value.trim();
+  const fileInput = document.getElementById('legDocFileInput');
+
+  if (!origin || !destination) {
+    alert("Please specify both Origin (From) and Destination (To) locations.");
+    return;
+  }
+
+  if (!m.shipmentLegs) m.shipmentLegs = [];
+
+  const processAddLeg = (docName = '', docData = '') => {
+    const newLeg = {
+      id: 'leg_' + Date.now(),
+      origin: origin,
+      destination: destination,
+      shipDate: shipDate,
+      carrier: carrier,
+      trackingNo: trackingNo,
+      status: status,
+      notes: notes,
+      docFileName: docName,
+      docFileData: docData
+    };
+
+    m.shipmentLegs.unshift(newLeg);
+    logAuditAction(`Logged shipment leg for ${m.serial}: ${origin} ➔ ${destination} (${status})`);
+    saveAppState(true, `Add Shipment Leg for ${m.serial}`);
+
+    document.getElementById('legOriginInput').value = '';
+    document.getElementById('legDestinationInput').value = '';
+    document.getElementById('legCarrierInput').value = '';
+    document.getElementById('legTrackingInput').value = '';
+    document.getElementById('legNotesInput').value = '';
+    if (fileInput) fileInput.value = '';
+
+    toggleAddShipmentLegForm();
+    renderShipmentLegs(m);
+    renderAllViews();
+    showToast(`Added shipment leg: ${origin} ➔ ${destination}`);
+  };
+
+  if (fileInput && fileInput.files && fileInput.files.length > 0) {
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      processAddLeg(file.name, e.target.result);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    processAddLeg();
+  }
+}
+
+async function deleteShipmentLegEntry(legId) {
+  if (currentRole !== 'admin') return;
+  const m = machines.find(item => item.id === currentMachineId || item.serial === currentMachineId);
+  if (!m || !m.shipmentLegs) return;
+
+  const confirmed = await showCustomConfirm(
+    "⚠️ Delete Shipment Leg",
+    `Are you sure you want to delete this shipment movement record from machine <strong>${m.serial}</strong>?`,
+    true,
+    "🗑️ Delete Shipment Leg"
+  );
+
+  if (confirmed) {
+    m.shipmentLegs = m.shipmentLegs.filter(l => l.id !== legId);
+    logAuditAction(`Deleted shipment leg from machine ${m.serial}`);
+    saveAppState(true, `Delete Shipment Leg`);
+    renderShipmentLegs(m);
+    renderAllViews();
+    showToast(`Shipment leg record deleted`);
+  }
+}
+
+function viewShipmentLegDoc(legId) {
+  const m = machines.find(item => item.id === currentMachineId || item.serial === currentMachineId);
+  if (!m || !m.shipmentLegs) return;
+
+  const leg = m.shipmentLegs.find(l => l.id === legId);
+  if (leg && leg.docFileData) {
+    openFileInPreviewWindow(leg.docFileName, `Shipping Waybill: ${leg.origin} ➔ ${leg.destination}`, "PDF Document", leg.docFileData);
+  } else {
+    alert("No shipping document attached to this movement leg.");
+  }
+}
+
+function renderShipmentLegs(m) {
+  const tbody = document.getElementById('mdlShipmentLegsBody');
+  if (!tbody) return;
+
+  const legs = m.shipmentLegs || [];
+  tbody.innerHTML = legs.map(l => {
+    let badgeClass = 'badge-primary';
+    if (l.status === 'Delivered') badgeClass = 'badge-success';
+    else if (l.status === 'Customs Clearance') badgeClass = 'badge-warning';
+    else if (l.status.includes('Returned')) badgeClass = 'badge-danger';
+
+    return `
+      <tr>
+        <td>
+          <strong style="color:var(--text-main); font-size:0.88rem;">${l.origin}</strong><br>
+          <span style="color:var(--primary); font-size:0.8rem; font-weight:700;">➔ ${l.destination}</span>
+        </td>
+        <td>
+          <strong class="font-code" style="color:var(--primary); font-size:0.82rem;">${l.shipDate}</strong><br>
+          <span class="subtext">${l.carrier || 'Logistics'}</span>
+        </td>
+        <td><span class="font-code text-highlight" style="font-weight:700;">${l.trackingNo || '—'}</span></td>
+        <td><span class="badge ${badgeClass}">${l.status}</span></td>
+        <td>
+          ${l.docFileData ? `
+            <button class="btn btn-secondary btn-sm" onclick="viewShipmentLegDoc('${l.id}')">
+              📄 ${l.docFileName || 'Waybill.pdf'}
+            </button>
+          ` : '<span class="subtext">No doc</span>'}
+        </td>
+        <td><span class="subtext" title="${l.notes || ''}">${l.notes || '—'}</span></td>
+        <td class="admin-only">
+          <button class="btn btn-danger btn-sm" onclick="deleteShipmentLegEntry('${l.id}')">
+            🗑️ Delete
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  if (legs.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="subtext" style="text-align:center; padding:1.5rem;">No multi-leg shipment movements logged yet. Click "➕ Log New Shipment / Transfer Leg" above to record transfers between Turkey stock, USA stock, and customer facilities.</td></tr>`;
+  }
+}
+
 // --- PAYMENT & INVOICE FINANCIAL MANAGEMENT ---
 function savePaymentStatus() {
   if (currentRole !== 'admin' && currentRole !== 'sales') return;
@@ -3195,6 +3378,7 @@ function openMachineDetailModal(machineId) {
   renderServiceHistory(m);
   renderPhotoGallery(m);
   renderPackagingLists(m);
+  renderShipmentLegs(m);
   renderDocumentVault(m);
   renderTestFormFiles(m);
   renderQCChecklist(m);

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserAccount, Machine, StatusHistoryLog, ComponentStock, ServiceRecord, AuditLog
+from .models import UserAccount, Machine, StatusHistoryLog, ComponentStock, ServiceRecord, AuditLog, ShipmentLeg
 
 admin.site.site_header = "ElectrospinTEK ERP Administration Portal"
 admin.site.site_title = "ElectrospinTEK ERP Admin"
@@ -13,6 +13,10 @@ class ServiceRecordInline(admin.TabularInline):
     model = ServiceRecord
     extra = 1
 
+class ShipmentLegInline(admin.TabularInline):
+    model = ShipmentLeg
+    extra = 1
+
 @admin.register(Machine)
 class MachineAdmin(admin.ModelAdmin):
     list_display = (
@@ -22,8 +26,15 @@ class MachineAdmin(admin.ModelAdmin):
     )
     list_filter = ('stage', 'paymentStatus', 'salesYear', 'isStockOrder', 'qcPassed')
     search_fields = ('serial', 'model', 'customer', 'invoiceNo', 'orderNo', 'poNo', 'quoteNo')
-    inlines = [StatusHistoryLogInline, ServiceRecordInline]
+    inlines = [StatusHistoryLogInline, ServiceRecordInline, ShipmentLegInline]
     ordering = ('-id',)
+
+
+@admin.register(ShipmentLeg)
+class ShipmentLegAdmin(admin.ModelAdmin):
+    list_display = ('machine', 'origin', 'destination', 'shipDate', 'carrier', 'trackingNo', 'status')
+    list_filter = ('status', 'carrier')
+    search_fields = ('machine__serial', 'origin', 'destination', 'trackingNo', 'notes')
 
 
 @admin.register(UserAccount)

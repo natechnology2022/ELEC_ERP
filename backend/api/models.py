@@ -131,6 +131,22 @@ class ServiceRecord(models.Model):
         return f"{self.machine.serial} - {self.serviceType} on {self.date}"
 
 
+class ShipmentLeg(models.Model):
+    machine = models.ForeignKey(Machine, related_name='shipment_legs', on_delete=models.CASCADE)
+    origin = models.CharField(max_length=150)
+    destination = models.CharField(max_length=150)
+    shipDate = models.CharField(max_length=20)
+    carrier = models.CharField(max_length=100)
+    trackingNo = models.CharField(max_length=100, blank=True, default='')
+    status = models.CharField(max_length=50, default='In Transit')
+    notes = models.TextField(blank=True, default='')
+    docFileName = models.CharField(max_length=255, blank=True, default='')
+    docFileData = models.TextField(blank=True, default='')
+
+    def __str__(self):
+        return f"{self.machine.serial}: {self.origin} -> {self.destination} ({self.status})"
+
+
 class AuditLog(models.Model):
     action = models.TextField()
     user = models.CharField(max_length=100, default='System')
