@@ -920,9 +920,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   background-color: var(--bg-card);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-lg);
-  width: 100%;
-  max-width: 620px;
-  max-height: 92vh;
+  width: 95vw;
+  max-width: 1550px;
+  max-height: 94vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 40px rgba(0,0,0,0.9), 0 0 20px var(--primary-glow);
@@ -930,7 +930,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .modal-container.large {
-  max-width: 1080px;
+  width: 96vw;
+  max-width: 1650px;
 }
 
 .modal-header {
@@ -961,31 +962,42 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   color: var(--primary);
 }
 
-/* Modal Nav Tabs */
+/* Modal Nav Tabs - Ultra Wide & Responsive */
 .modal-nav-tabs {
   display: flex;
   background-color: #000000;
   border-bottom: 2px solid var(--border-color);
-  padding: 0 1rem;
-  gap: 0.4rem;
-  overflow-x: auto;
+  padding: 0.5rem 1.2rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .mdl-tab {
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
-  padding: 0.8rem 0.95rem;
+  padding: 0.65rem 1.1rem;
   font-weight: 700;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   cursor: pointer;
-  border-bottom: 3px solid transparent;
   white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.mdl-tab:hover {
+  background: rgba(255, 204, 0, 0.08);
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 .mdl-tab.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
+  background: var(--primary);
+  color: #000000;
+  border-color: var(--primary);
+  font-weight: 800;
+  box-shadow: 0 0 12px var(--primary-glow);
 }
 
 .tab-pane {
