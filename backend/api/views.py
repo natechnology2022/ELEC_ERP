@@ -34,14 +34,24 @@ class ServiceRecordViewSet(viewsets.ModelViewSet):
 
 @api_view(['POST'])
 def login_view(request):
-    email = request.data.get('email', '').strip()
+    identifier = request.data.get('email', '').strip()
     password = request.data.get('password', '').strip()
     
     try:
-        user = UserAccount.objects.get(email__iexact=email, password=password, isActive=True)
-        return Response({
-            'success': True,
-            'user': UserAccountSerializer(user).data
-        })
-    except UserAccount.DoesNotExist:
-        return Response({'success': False, 'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+        from django.db.models import Q
+        user = UserAccount.objects.filter(
+            isActive=True,
+            password=password
+        ).filter(
+            Q(email__iexact=identifier) | Q(fullName__iexact=identifier)
+        ).first()
+
+        if user:
+            return Response({
+                'success': True,
+                'user': UserAccountSerializer(user).data
+            })
+        else:
+            return Response({'success': False, 'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+    except Exception as e:
+        return Response({'success': False, 'message': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
