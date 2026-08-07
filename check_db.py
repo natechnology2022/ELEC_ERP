@@ -7,12 +7,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 
 django.setup()
 
-from api.models import AuditLog, UserAccount
+from api.models import UserAccount
 
-print("=== RECENT AUDIT LOGS ===")
-for a in AuditLog.objects.order_by('-id')[:10]:
-    print(f"{a.timestamp} | Action: {a.action} | User: {a.username} | Result: {a.result} | Details: {a.details}")
-
-print("=== USER ACCOUNTS ===")
-for u in UserAccount.objects.all():
-    print(f"Email: {u.email} | Active: {u.isActive} | Password: {u.password[:20]}...")
+print("=== TESTING PASSWORDS FOR ADMIN ===")
+admin = UserAccount.objects.filter(email='admin@electrospintek.com').first()
+if admin:
+    print("Testing 'admin123':", admin.check_password('admin123'))
+    print("Testing 'electrospin123':", admin.check_password('electrospin123'))
+    print("Testing 'Admin123!':", admin.check_password('Admin123!'))
+    print("Failed attempts:", admin.failedLoginAttempts)
+    print("Lockout until:", admin.lockoutUntil)
+    print("Is locked out:", admin.is_locked_out())
+else:
+    print("Admin user not found!")
