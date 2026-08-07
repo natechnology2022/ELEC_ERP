@@ -330,20 +330,27 @@ const initialAuditLogs = [
   { user: "Admin", date: "2026-08-04 09:00", msg: "Initialized ElectrospinTEK ERP with strict 8-character serial numbers." }
 ];
 
-// Local Storage Setup (v15)
-let userAccounts = JSON.parse(localStorage.getItem('estek_users_v15')) || initialUserAccounts;
-let machines = JSON.parse(localStorage.getItem('estek_machines_v15')) || initialMachines;
-let stockParts = JSON.parse(localStorage.getItem('estek_stock_parts_v15')) || initialStockParts;
-let auditLogs = JSON.parse(localStorage.getItem('estek_audit_v15')) || initialAuditLogs;
+// Local Storage Setup (v16 - Pure Django DB Source of Truth)
+// Purge legacy v15 cache if present
+if (localStorage.getItem('estek_machines_v15')) {
+  localStorage.removeItem('estek_machines_v15');
+  localStorage.removeItem('estek_stock_parts_v15');
+  localStorage.removeItem('estek_users_v15');
+}
+
+let userAccounts = JSON.parse(localStorage.getItem('estek_users_v16')) || initialUserAccounts;
+let machines = JSON.parse(localStorage.getItem('estek_machines_v16')) || [];
+let stockParts = JSON.parse(localStorage.getItem('estek_stock_parts_v16')) || initialStockParts;
+let auditLogs = JSON.parse(localStorage.getItem('estek_audit_v16')) || initialAuditLogs;
 
 function saveAppState(pushUndo = true, actionLabel = 'Action') {
   if (pushUndo) {
     pushUndoState(actionLabel);
   }
-  localStorage.setItem('estek_users_v15', JSON.stringify(userAccounts));
-  localStorage.setItem('estek_machines_v15', JSON.stringify(machines));
-  localStorage.setItem('estek_stock_parts_v15', JSON.stringify(stockParts));
-  localStorage.setItem('estek_audit_v15', JSON.stringify(auditLogs));
+  localStorage.setItem('estek_users_v16', JSON.stringify(userAccounts));
+  localStorage.setItem('estek_machines_v16', JSON.stringify(machines));
+  localStorage.setItem('estek_stock_parts_v16', JSON.stringify(stockParts));
+  localStorage.setItem('estek_audit_v16', JSON.stringify(auditLogs));
 }
 
 // --- STRICT 8-CHARACTER SERIAL NUMBER AUTO-SUGGESTION ENGINE ---
