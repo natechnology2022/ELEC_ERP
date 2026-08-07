@@ -662,20 +662,26 @@ function switchAuthTab(tabName) {
 }
 
 function checkActiveUserSession() {
-  const savedUserJson = localStorage.getItem('estek_active_user_v15');
-  if (savedUserJson) {
+  const savedUserJson = localStorage.getItem('estek_active_user_v15') || localStorage.getItem('estek_active_user_v16');
+  const token = localStorage.getItem('estek_auth_token');
+
+  if (savedUserJson && token) {
     try {
       activeUser = JSON.parse(savedUserJson);
       applyUserRolePermissions(activeUser);
       hideLoginScreen();
+      return;
     } catch (e) {
       activeUser = null;
-      showLoginScreen();
     }
-  } else {
-    activeUser = null;
-    showLoginScreen();
   }
+
+  // Require fresh login if token or active user is missing
+  localStorage.removeItem('estek_active_user_v15');
+  localStorage.removeItem('estek_active_user_v16');
+  localStorage.removeItem('estek_auth_token');
+  activeUser = null;
+  showLoginScreen();
 }
 
 async function handleUserLogin(e) {
@@ -936,7 +942,12 @@ function populateProductionDates() {
 
 async function syncWithServerDatabase() {
   const token = localStorage.getItem('estek_auth_token');
-  const headers = token ? { 'Authorization': `Token ${token}` } : {};
+  if (!token) {
+    checkActiveUserSession();
+    return;
+  }
+
+  const headers = { 'Authorization': `Token ${token}` };
 
   try {
     const resMachines = await fetch('/api/machines/', { headers });
@@ -945,8 +956,13 @@ async function syncWithServerDatabase() {
       const serverMachines = data.results || data;
       if (Array.isArray(serverMachines)) {
         machines = serverMachines;
-        localStorage.setItem('estek_machines_v15', JSON.stringify(machines));
+        localStorage.setItem('estek_machines_v16', JSON.stringify(machines));
       }
+    } else if (resMachines.status === 401 || resMachines.status === 403) {
+      // Force fresh login if token expired/unauthorized
+      localStorage.removeItem('estek_auth_token');
+      checkActiveUserSession();
+      return;
     }
 
     const resStock = await fetch('/api/stock/', { headers });
@@ -955,7 +971,7 @@ async function syncWithServerDatabase() {
       const serverStock = stockData.results || stockData;
       if (Array.isArray(serverStock)) {
         stockParts = serverStock;
-        localStorage.setItem('estek_stock_parts_v15', JSON.stringify(stockParts));
+        localStorage.setItem('estek_stock_parts_v16', JSON.stringify(stockParts));
       }
     }
 
@@ -965,11 +981,11 @@ async function syncWithServerDatabase() {
       const serverUsers = usersData.results || usersData;
       if (Array.isArray(serverUsers)) {
         userAccounts = serverUsers;
-        localStorage.setItem('estek_users_v15', JSON.stringify(userAccounts));
+        localStorage.setItem('estek_users_v16', JSON.stringify(userAccounts));
       }
     }
   } catch (e) {
-    console.log('Using cached offline data', e);
+    console.log('Syncing error:', e);
   }
 
   renderAllViews();
