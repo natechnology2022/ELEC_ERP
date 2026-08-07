@@ -936,7 +936,7 @@ async function syncWithServerDatabase() {
     if (resMachines.ok) {
       const data = await resMachines.json();
       const serverMachines = data.results || data;
-      if (Array.isArray(serverMachines) && serverMachines.length > 0) {
+      if (Array.isArray(serverMachines)) {
         machines = serverMachines;
         localStorage.setItem('estek_machines_v15', JSON.stringify(machines));
       }
@@ -946,13 +946,23 @@ async function syncWithServerDatabase() {
     if (resStock.ok) {
       const stockData = await resStock.json();
       const serverStock = stockData.results || stockData;
-      if (Array.isArray(serverStock) && serverStock.length > 0) {
+      if (Array.isArray(serverStock)) {
         stockParts = serverStock;
         localStorage.setItem('estek_stock_parts_v15', JSON.stringify(stockParts));
       }
     }
+
+    const resUsers = await fetch('/api/users/', { headers });
+    if (resUsers.ok) {
+      const usersData = await resUsers.json();
+      const serverUsers = usersData.results || usersData;
+      if (Array.isArray(serverUsers)) {
+        userAccounts = serverUsers;
+        localStorage.setItem('estek_users_v15', JSON.stringify(userAccounts));
+      }
+    }
   } catch (e) {
-    console.log('Using cached offline data');
+    console.log('Using cached offline data', e);
   }
 
   renderAllViews();
