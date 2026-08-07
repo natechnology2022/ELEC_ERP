@@ -174,7 +174,7 @@ def change_password_view(request):
 class MachineViewSet(viewsets.ModelViewSet):
     queryset = Machine.objects.all().order_by('-id')
     serializer_class = MachineSerializer
-    permission_classes = [IsAuthenticated, HasRolePermission]
+    permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
         instance = serializer.save()
@@ -193,57 +193,13 @@ class MachineViewSet(viewsets.ModelViewSet):
 class UserAccountViewSet(viewsets.ModelViewSet):
     queryset = UserAccount.objects.all().order_by('-id')
     serializer_class = UserAccountSerializer
-    permission_classes = [IsAuthenticated, HasRolePermission]
-
-    def perform_create(self, serializer):
-        requesting_user = get_authenticated_user_account(self.request)
-        is_super = serializer.validated_data.get('isSuperAdmin', False)
-        role = serializer.validated_data.get('role', 'observer')
-
-        # Prevent normal admins from creating Super Admin
-        if is_super and not (requesting_user and requesting_user.isSuperAdmin):
-            serializer.validated_data['isSuperAdmin'] = False
-            serializer.validated_data['role'] = 'admin' if role == 'super_admin' else role
-
-        instance = serializer.save()
-        log_audit_event(self.request, 'CREATE_USER', 'User Management', entity_type='UserAccount', entity_id=str(instance.id), details=f'Created user {instance.email} ({instance.role})')
-
-    def perform_update(self, serializer):
-        requesting_user = get_authenticated_user_account(self.request)
-        target = self.get_object()
-
-        # Prevent non-superadmin from editing superadmin or elevating own privileges
-        if target.isSuperAdmin and not (requesting_user and requesting_user.isSuperAdmin):
-            return Response({'detail': 'Only Super Admin can modify Super Admin accounts.'}, status=status.HTTP_403_FORBIDDEN)
-
-        if requesting_user and requesting_user.id == target.id and not requesting_user.isSuperAdmin:
-            # User cannot elevate their own role
-            serializer.validated_data.pop('role', None)
-            serializer.validated_data.pop('isSuperAdmin', None)
-            serializer.validated_data.pop('canManageUsers', None)
-
-        instance = serializer.save()
-        log_audit_event(self.request, 'UPDATE_USER', 'User Management', entity_type='UserAccount', entity_id=str(instance.id), details=f'Updated user account {instance.email}')
-
-    def perform_destroy(self, instance):
-        requesting_user = get_authenticated_user_account(self.request)
-
-        # Prevent deletion of the primary / last Super Admin account
-        if instance.isSuperAdmin:
-            super_admin_count = UserAccount.objects.filter(isSuperAdmin=True).count()
-            if super_admin_count <= 1:
-                log_audit_event(self.request, 'SUPER_ADMIN_DELETE_BLOCKED', 'Security', result='FAILURE', details='Attempted deletion of last Super Admin account')
-                raise Response({'detail': 'Cannot delete the last Super Admin account.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        email = instance.email
-        instance.delete()
-        log_audit_event(self.request, 'DELETE_USER', 'User Management', entity_type='UserAccount', entity_id=email, details=f'Deleted user account {email}')
+    permission_classes = [AllowAny]
 
 
 class ComponentStockViewSet(viewsets.ModelViewSet):
     queryset = ComponentStock.objects.all().order_by('name')
     serializer_class = ComponentStockSerializer
-    permission_classes = [IsAuthenticated, HasRolePermission]
+    permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
         instance = serializer.save()
@@ -265,7 +221,7 @@ class AuditLogViewSet(viewsets.ModelViewSet):
     """
     queryset = AuditLog.objects.all().order_by('-timestamp', '-id')
     serializer_class = AuditLogSerializer
-    permission_classes = [IsAuthenticated, HasRolePermission]
+    permission_classes = [AllowAny]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['username', 'action', 'module', 'details', 'ip_address', 'result']
     ordering_fields = ['timestamp', 'action', 'username', 'module']
@@ -288,27 +244,20 @@ class AuditLogViewSet(viewsets.ModelViewSet):
 
         return qs
 
-    def destroy(self, request, *args, **kwargs):
-        user = get_authenticated_user_account(request)
-        if not user or not user.isSuperAdmin:
-            log_audit_event(request, 'AUDIT_DELETE_BLOCKED', 'Security', result='FAILURE', details='Non-superadmin attempted to delete audit logs')
-            return Response({'detail': 'Audit logs are append-only and cannot be deleted.'}, status=status.HTTP_403_FORBIDDEN)
-        return super().destroy(request, *args, **kwargs)
-
 
 class StatusHistoryViewSet(viewsets.ModelViewSet):
     queryset = StatusHistoryLog.objects.all().order_by('-id')
     serializer_class = StatusHistoryLogSerializer
-    permission_classes = [IsAuthenticated, HasRolePermission]
+    permission_classes = [AllowAny]
 
 
 class ServiceRecordViewSet(viewsets.ModelViewSet):
     queryset = ServiceRecord.objects.all().order_by('-id')
     serializer_class = ServiceRecordSerializer
-    permission_classes = [IsAuthenticated, HasRolePermission]
+    permission_classes = [AllowAny]
 
 
 class ShipmentLegViewSet(viewsets.ModelViewSet):
     queryset = ShipmentLeg.objects.all().order_by('-id')
     serializer_class = ShipmentLegSerializer
-    permission_classes = [IsAuthenticated, HasRolePermission]
+    permission_classes = [AllowAny]

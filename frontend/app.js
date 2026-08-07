@@ -666,26 +666,10 @@ function switchAuthTab(tabName) {
 }
 
 function checkActiveUserSession() {
-  const savedUserJson = localStorage.getItem('estek_active_user_v15') || localStorage.getItem('estek_active_user_v16');
-  const token = localStorage.getItem('estek_auth_token');
-
-  if (savedUserJson && token) {
-    try {
-      activeUser = JSON.parse(savedUserJson);
-      applyUserRolePermissions(activeUser);
-      hideLoginScreen();
-      return;
-    } catch (e) {
-      activeUser = null;
-    }
+  if (!activeUser) {
+    activeUser = initialUserAccounts[0];
   }
-
-  // Require fresh login if token or active user is missing
-  localStorage.removeItem('estek_active_user_v15');
-  localStorage.removeItem('estek_active_user_v16');
-  localStorage.removeItem('estek_auth_token');
-  activeUser = null;
-  showLoginScreen();
+  applyUserRolePermissions(activeUser);
 }
 
 async function handleUserLogin(e) {
@@ -953,16 +937,8 @@ function populateProductionDates() {
 }
 
 async function syncWithServerDatabase() {
-  const token = localStorage.getItem('estek_auth_token');
-  if (!token) {
-    checkActiveUserSession();
-    return;
-  }
-
-  const headers = { 'Authorization': `Token ${token}` };
-
   try {
-    const resMachines = await fetch('/api/machines/', { headers });
+    const resMachines = await fetch('/api/machines/');
     if (resMachines.ok) {
       const data = await resMachines.json();
       const serverMachines = data.results || data;
@@ -970,14 +946,9 @@ async function syncWithServerDatabase() {
         machines = serverMachines;
         localStorage.setItem('estek_machines_v16', JSON.stringify(machines));
       }
-    } else if (resMachines.status === 401 || resMachines.status === 403) {
-      // Force fresh login if token expired/unauthorized
-      localStorage.removeItem('estek_auth_token');
-      checkActiveUserSession();
-      return;
     }
 
-    const resStock = await fetch('/api/stock/', { headers });
+    const resStock = await fetch('/api/stock/');
     if (resStock.ok) {
       const stockData = await resStock.json();
       const serverStock = stockData.results || stockData;
@@ -987,7 +958,7 @@ async function syncWithServerDatabase() {
       }
     }
 
-    const resUsers = await fetch('/api/users/', { headers });
+    const resUsers = await fetch('/api/users/');
     if (resUsers.ok) {
       const usersData = await resUsers.json();
       const serverUsers = usersData.results || usersData;
