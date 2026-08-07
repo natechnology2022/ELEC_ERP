@@ -1035,13 +1035,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- USER PERMISSIONS & ACCOUNTS MANAGEMENT ---
-function toggleAddUserForm() {
-  const box = document.getElementById('addUserFormBox');
-  if (box) {
-    box.style.display = box.style.display === 'none' ? 'block' : 'none';
-  }
-}
-
 function handleCreateNewUser(e) {
   e.preventDefault();
   if (currentRole !== 'admin') return;
