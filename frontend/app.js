@@ -903,11 +903,43 @@ function populateProductionDates() {
   if (document.getElementById('manualStageDate')) document.getElementById('manualStageDate').value = todayStr;
 }
 
+async function syncWithServerDatabase() {
+  const token = localStorage.getItem('estek_auth_token');
+  const headers = token ? { 'Authorization': `Token ${token}` } : {};
+
+  try {
+    const resMachines = await fetch('/api/machines/', { headers });
+    if (resMachines.ok) {
+      const data = await resMachines.json();
+      const serverMachines = data.results || data;
+      if (Array.isArray(serverMachines) && serverMachines.length > 0) {
+        machines = serverMachines;
+        localStorage.setItem('estek_machines_v15', JSON.stringify(machines));
+      }
+    }
+
+    const resStock = await fetch('/api/stock/', { headers });
+    if (resStock.ok) {
+      const stockData = await resStock.json();
+      const serverStock = stockData.results || stockData;
+      if (Array.isArray(serverStock) && serverStock.length > 0) {
+        stockParts = serverStock;
+        localStorage.setItem('estek_stock_parts_v15', JSON.stringify(stockParts));
+      }
+    }
+  } catch (e) {
+    console.log('Using cached offline data');
+  }
+
+  renderAllViews();
+}
+
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
   setupNavigation();
   checkActiveUserSession();
   populateProductionDates();
+  syncWithServerDatabase();
 
   document.body.addEventListener('click', (e) => {
     if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'date') {
