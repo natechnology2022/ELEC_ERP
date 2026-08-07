@@ -662,12 +662,12 @@ function checkActiveUserSession() {
       applyUserRolePermissions(activeUser);
       hideLoginScreen();
     } catch (e) {
+      activeUser = null;
       showLoginScreen();
     }
   } else {
-    activeUser = userAccounts[0];
-    applyUserRolePermissions(activeUser);
-    hideLoginScreen();
+    activeUser = null;
+    showLoginScreen();
   }
 }
 
