@@ -40,18 +40,18 @@ class ShipmentLegAdmin(admin.ModelAdmin):
 @admin.register(UserAccount)
 class UserAccountAdmin(admin.ModelAdmin):
     list_display = (
-        'fullName', 'email', 'role', 'isActive', 
+        'fullName', 'email', 'role', 'isActive', 'isSuperAdmin',
         'twoFactorEnabled', 'canManageUsers', 'canEditMachines', 
         'canManageFinance', 'created_at'
     )
-    list_filter = ('role', 'isActive', 'twoFactorEnabled', 'canManageUsers', 'canEditMachines')
+    list_filter = ('role', 'isActive', 'isSuperAdmin', 'twoFactorEnabled', 'canManageUsers', 'canEditMachines')
     search_fields = ('fullName', 'email')
     fieldsets = (
         ('Account Credentials', {
-            'fields': ('fullName', 'email', 'password', 'role', 'isActive')
+            'fields': ('fullName', 'email', 'password', 'role', 'isActive', 'isSuperAdmin')
         }),
         ('Security & 2FA', {
-            'fields': ('twoFactorEnabled', 'lastLogin')
+            'fields': ('twoFactorEnabled', 'failedLoginAttempts', 'lockoutUntil', 'lastLogin', 'lastActivity')
         }),
         ('Module RBAC Permissions', {
             'fields': (
@@ -71,9 +71,10 @@ class ComponentStockAdmin(admin.ModelAdmin):
 
 @admin.register(AuditLog)
 class AuditLogAdmin(admin.ModelAdmin):
-    list_display = ('timestamp', 'user', 'action')
-    search_fields = ('action', 'user')
-    readonly_fields = ('timestamp', 'user', 'action')
+    list_display = ('timestamp', 'username', 'action', 'module', 'result', 'ip_address')
+    list_filter = ('module', 'result', 'action')
+    search_fields = ('username', 'action', 'module', 'details', 'ip_address')
+    readonly_fields = ('timestamp', 'user_id', 'username', 'action', 'module', 'entity_type', 'entity_id', 'ip_address', 'result', 'details')
 
 
 @admin.register(ServiceRecord)

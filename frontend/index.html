@@ -442,14 +442,81 @@
       <section id="view-audit" class="view-section">
         <div class="section-header">
           <div>
-            <h2 class="section-title">System Audit Trail</h2>
-            <p class="section-subtitle">Complete chronological record of all status changes, date edits, and user logins</p>
+            <h2 class="section-title">📜 Security Audit Log Trail</h2>
+            <p class="section-subtitle">Immutable append-only server-side record of authentication, privilege changes, machine tracking, and system events</p>
+          </div>
+          <div class="inline-flex gap-sm">
+            <button class="btn btn-secondary" onclick="fetchAndRenderAuditLogs()">
+              🔄 Refresh Audit Logs
+            </button>
           </div>
         </div>
 
-        <div class="card-box">
-          <div id="auditTimeline" class="timeline">
-            <!-- Dynamically rendered by app.js -->
+        <!-- SEARCH & FILTER TOOLBAR FOR AUDIT LOGS -->
+        <div class="card-box margin-bottom-md">
+          <div class="filter-bar-grid">
+            <div class="search-bar flex-2">
+              <span>🔍</span>
+              <input type="text" id="auditSearchInput" placeholder="Search by Username, Action, Module, IP Address, Details..." onkeyup="applyAuditFilters()">
+            </div>
+
+            <div class="form-group flex-1">
+              <label class="form-label">Module</label>
+              <select id="auditModuleFilter" class="form-select" onchange="applyAuditFilters()">
+                <option value="ALL">All Modules</option>
+                <option value="Authentication">Authentication</option>
+                <option value="User Management">User Management</option>
+                <option value="Machine Tracking">Machine Tracking</option>
+                <option value="Inventory">Inventory</option>
+                <option value="Security">Security</option>
+              </select>
+            </div>
+
+            <div class="form-group flex-1">
+              <label class="form-label">Result Status</label>
+              <select id="auditResultFilter" class="form-select" onchange="applyAuditFilters()">
+                <option value="ALL">All Results</option>
+                <option value="SUCCESS">Success Only</option>
+                <option value="FAILURE">Failure Only</option>
+              </select>
+            </div>
+
+            <div class="form-group flex-1">
+              <label class="form-label">Sort Order</label>
+              <select id="auditSortOrder" class="form-select" onchange="applyAuditFilters()">
+                <option value="-timestamp">Newest First</option>
+                <option value="timestamp">Oldest First</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- AUDIT LOGS DATA TABLE -->
+        <div class="table-container margin-bottom-md">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Timestamp (UTC)</th>
+                <th>User / Identity</th>
+                <th>Action</th>
+                <th>Module</th>
+                <th>Target Entity</th>
+                <th>IP Address</th>
+                <th>Status</th>
+                <th>Details / Description</th>
+              </tr>
+            </thead>
+            <tbody id="auditTableBody">
+              <!-- Dynamically rendered by app.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="flex-between align-center">
+          <span id="auditPaginationInfo" class="subtext">Showing page 1 of 1</span>
+          <div class="inline-flex gap-sm">
+            <button id="btnPrevAuditPage" class="btn btn-secondary btn-sm" onclick="changeAuditPage(-1)" disabled>◀ Previous</button>
+            <button id="btnNextAuditPage" class="btn btn-secondary btn-sm" onclick="changeAuditPage(1)" disabled>Next ▶</button>
           </div>
         </div>
       </section>
