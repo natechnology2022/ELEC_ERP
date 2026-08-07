@@ -1103,36 +1103,6 @@ function deleteUserAccount(userId) {
   }
 }
 
-function renderUserAccountsTable() {
-  const tbody = document.getElementById('userAccountsTableBody');
-  if (!tbody) return;
-
-  tbody.innerHTML = userAccounts.map(u => {
-    let roleBadge = '';
-    if (u.role === 'admin') roleBadge = `<span class="badge badge-warning">⚡ Super Admin</span>`;
-    else if (u.role === 'engineer') roleBadge = `<span class="badge badge-primary">🔧 Field Engineer</span>`;
-    else if (u.role === 'sales') roleBadge = `<span class="badge badge-success">💰 Sales & Finance</span>`;
-    else roleBadge = `<span class="badge badge-secondary">👁️ Guest Observer</span>`;
-
-    return `
-      <tr>
-        <td><strong style="color:var(--text-main); font-size:0.9rem;">${u.fullName}</strong></td>
-        <td><span class="font-code" style="color:var(--primary);">${u.email}</span></td>
-        <td>${roleBadge}</td>
-        <td><span class="font-code subtext">${u.password}</span></td>
-        <td><span class="badge badge-success">🟢 ${u.status}</span></td>
-        <td>
-          ${u.email !== 'admin@electrospintek.com' ? `
-            <button class="btn btn-danger btn-sm" onclick="deleteUserAccount('${u.id}')">
-              🗑️ Delete User
-            </button>
-          ` : '<span class="subtext">Primary Admin</span>'}
-        </td>
-      </tr>
-    `;
-  }).join('');
-}
-
 // --- EXPORT & IMPORT GOOGLE SHEETS / EXCEL DATA SYSTEM ---
 function openExportModal() {
   document.getElementById('exportModal').classList.add('active');
