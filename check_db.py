@@ -7,8 +7,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 
 django.setup()
 
-from api.models import UserAccount
+from api.models import AuditLog, UserAccount
 
-print("=== DETAILED USER ACCOUNTS CHECK ===")
+print("=== RECENT AUDIT LOGS ===")
+for a in AuditLog.objects.order_by('-id')[:10]:
+    print(f"{a.timestamp} | Action: {a.action} | User: {a.username} | Result: {a.result} | Details: {a.details}")
+
+print("=== USER ACCOUNTS ===")
 for u in UserAccount.objects.all():
-    print(f"Email: {u.email} | Active: {u.isActive} | FailedAttempts: {u.failedLoginAttempts} | LockoutUntil: {u.lockoutUntil} | IsLockedOut: {u.is_locked_out()}")
+    print(f"Email: {u.email} | Active: {u.isActive} | Password: {u.password[:20]}...")
