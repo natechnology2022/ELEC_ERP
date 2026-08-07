@@ -24,6 +24,7 @@ const initialUserAccounts = [
     role: "admin",
     roleLabel: "Super Admin (Full Edit)",
     status: "Active",
+    isActive: true,
     twoFactorEnabled: true,
     permissions: {
       canManageUsers: true,
@@ -42,6 +43,7 @@ const initialUserAccounts = [
     role: "engineer",
     roleLabel: "Field Engineer",
     status: "Active",
+    isActive: true,
     twoFactorEnabled: false,
     permissions: {
       canManageUsers: false,
@@ -60,6 +62,7 @@ const initialUserAccounts = [
     role: "sales",
     roleLabel: "Sales Manager",
     status: "Active",
+    isActive: true,
     twoFactorEnabled: false,
     permissions: {
       canManageUsers: false,
@@ -78,6 +81,7 @@ const initialUserAccounts = [
     role: "observer",
     roleLabel: "Guest Observer",
     status: "Active",
+    isActive: true,
     twoFactorEnabled: false,
     permissions: {
       canManageUsers: false,
@@ -719,7 +723,7 @@ async function handleUserLogin(e) {
     const foundUser = userAccounts.find(u => u.email.toLowerCase() === emailInput.toLowerCase() && (u.password === passInput || u.check_password?.(passInput)));
 
     if (foundUser) {
-      if (foundUser.status === 'Disabled' || !foundUser.isActive) {
+      if (foundUser.status === 'Disabled' || foundUser.isActive === false) {
         if (errorEl) {
           errorEl.textContent = '❌ Account Disabled: This user account has been disabled by Super Admin.';
           errorEl.style.display = 'block';
