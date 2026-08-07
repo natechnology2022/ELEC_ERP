@@ -3992,3 +3992,32 @@ function handleCreateStock(e) {
 function closeModal(modalId) {
   document.getElementById(modalId).classList.remove('active');
 }
+
+// --- EXPOSE GLOBAL HANDLERS TO WINDOW OBJECT FOR HTML EVENTS ---
+window.switchAuthTab = switchAuthTab;
+window.handleUserLogin = handleUserLogin;
+window.handleUserSignUp = handleUserSignUp;
+window.quickFillLogin = quickFillLogin;
+window.togglePasswordVisibility = togglePasswordVisibility;
+window.handleUserLogout = handleUserLogout;
+window.showLoginScreen = showLoginScreen;
+window.hideLoginScreen = hideLoginScreen;
+window.applyFilters = applyFilters;
+window.resetMasterFilters = resetMasterFilters;
+window.quickFilterLocation = quickFilterLocation;
+window.quickFilterYear = quickFilterYear;
+window.switchView = switchView;
+window.performUndo = performUndo;
+window.openExportModal = openExportModal;
+window.openStartProductionModal = openStartProductionModal;
+window.openEditMachineModal = openEditMachineModal;
+window.closeModal = closeModal;
+window.toggleAddUserForm = toggleAddUserForm;
+window.handleCreateNewUserFromAdmin = handleCreateNewUserFromAdmin;
+window.autoCheckRolePermissions = autoCheckRolePermissions;
+window.confirmClearAllDataWithPassword = confirmClearAllDataWithPassword;
+window.fetchAndRenderAuditLogs = fetchAndRenderAuditLogs;
+window.applyAuditFilters = applyAuditFilters;
+window.changeAuditPage = changeAuditPage;
+window.handle2FAVerificationSubmit = handle2FAVerificationSubmit;
+
