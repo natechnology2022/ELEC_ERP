@@ -823,11 +823,19 @@ function handleUserLogout() {
 }
 
 function showLoginScreen() {
-  document.getElementById('loginScreen').classList.remove('hidden');
+  const el = document.getElementById('loginScreen');
+  if (el) {
+    el.style.display = 'flex';
+    el.classList.remove('hidden');
+  }
 }
 
 function hideLoginScreen() {
-  document.getElementById('loginScreen').classList.add('hidden');
+  const el = document.getElementById('loginScreen');
+  if (el) {
+    el.style.display = 'none';
+    el.classList.add('hidden');
+  }
 }
 
 function applyUserRolePermissions(user) {

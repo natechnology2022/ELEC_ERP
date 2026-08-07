@@ -107,6 +107,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+  display: none !important;
 }
 
 .login-card {
