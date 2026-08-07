@@ -1830,23 +1830,27 @@ function renderUserAccountsTable() {
       p.canEditMachines ? '<span class="subtext font-code" style="color:var(--success);">Machines</span>' : '',
       p.canManageFinance ? '<span class="subtext font-code" style="color:var(--warning);">Finance</span>' : '',
       p.canManageEngineering ? '<span class="subtext font-code" style="color:var(--purple);">Engine</span>' : '',
+      p.canExportReports ? '<span class="subtext font-code" style="color:var(--secondary);">Reports</span>' : '',
     ].filter(Boolean).join(' • ') || 'Read-Only';
 
     return `
       <tr>
         <td><strong style="color:var(--text-main); font-size:0.9rem;">${u.fullName}</strong></td>
-        <td><span class="font-code">${u.email}</span></td>
+        <td><span class="font-code" style="color:var(--primary);">${u.email}</span></td>
         <td>${roleBadge}</td>
         <td>${permChips}</td>
         <td>${twoFaBadge}</td>
         <td>${statusBadge}</td>
-        <td class="admin-only">
+        <td>
           <div class="inline-flex gap-sm">
-            <button class="btn btn-secondary btn-sm" onclick="openPasswordResetModal(${idx})">
+            <button class="btn btn-secondary btn-sm" onclick="openEditPermissionsModal(${idx})" title="Configure Granular Permissions">
+              ⚙️ Permissions
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="openPasswordResetModal(${idx})" title="Reset User Password">
               🔒 Reset Pass
             </button>
             ${u.email !== 'admin@electrospintek.com' ? `
-              <button class="btn btn-danger btn-sm" onclick="deleteUserAccount(${idx})">
+              <button class="btn btn-danger btn-sm" onclick="deleteUserAccount(${idx})" title="Delete User Account">
                 🗑️ Delete
               </button>
             ` : ''}
@@ -1855,6 +1859,113 @@ function renderUserAccountsTable() {
       </tr>
     `;
   }).join('');
+}
+
+function openEditPermissionsModal(idx) {
+  const u = userAccounts[idx];
+  if (!u) return;
+
+  document.getElementById('editPermUserId').value = idx;
+  document.getElementById('editPermUserEmail').textContent = u.email;
+  document.getElementById('editPermRoleSelect').value = u.role || 'admin';
+
+  const p = u.permissions || {};
+  document.getElementById('editPermUsers').checked = !!p.canManageUsers;
+  document.getElementById('editPermMachines').checked = !!p.canEditMachines;
+  document.getElementById('editPermFinance').checked = !!p.canManageFinance;
+  document.getElementById('editPermEng').checked = !!p.canManageEngineering;
+  document.getElementById('editPermReports').checked = !!p.canExportReports;
+  document.getElementById('editPermClearDb').checked = !!p.canClearDb;
+
+  document.getElementById('editPermissionsModal').classList.add('active');
+}
+
+function autoFillEditPermissionsByRole(roleVal) {
+  if (roleVal === 'admin') {
+    document.getElementById('editPermUsers').checked = true;
+    document.getElementById('editPermMachines').checked = true;
+    document.getElementById('editPermFinance').checked = true;
+    document.getElementById('editPermEng').checked = true;
+    document.getElementById('editPermReports').checked = true;
+    document.getElementById('editPermClearDb').checked = true;
+  } else if (roleVal === 'engineer') {
+    document.getElementById('editPermUsers').checked = false;
+    document.getElementById('editPermMachines').checked = true;
+    document.getElementById('editPermFinance').checked = false;
+    document.getElementById('editPermEng').checked = true;
+    document.getElementById('editPermReports').checked = true;
+    document.getElementById('editPermClearDb').checked = false;
+  } else if (roleVal === 'sales') {
+    document.getElementById('editPermUsers').checked = false;
+    document.getElementById('editPermMachines').checked = false;
+    document.getElementById('editPermFinance').checked = true;
+    document.getElementById('editPermEng').checked = false;
+    document.getElementById('editPermReports').checked = true;
+    document.getElementById('editPermClearDb').checked = false;
+  } else {
+    document.getElementById('editPermUsers').checked = false;
+    document.getElementById('editPermMachines').checked = false;
+    document.getElementById('editPermFinance').checked = false;
+    document.getElementById('editPermEng').checked = false;
+    document.getElementById('editPermReports').checked = false;
+    document.getElementById('editPermClearDb').checked = false;
+  }
+}
+
+function handleSaveUserPermissionsSubmit(e) {
+  e.preventDefault();
+  const idx = document.getElementById('editPermUserId').value;
+  const u = userAccounts[idx];
+  if (!u) return;
+
+  const newRole = document.getElementById('editPermRoleSelect').value;
+  u.role = newRole;
+
+  let label = "Super Admin";
+  if (newRole === "engineer") label = "Field Engineer";
+  else if (newRole === "sales") label = "Sales Manager";
+  else if (newRole === "observer") label = "Guest Observer";
+  u.roleLabel = label;
+
+  u.permissions = {
+    canManageUsers: document.getElementById('editPermUsers').checked,
+    canEditMachines: document.getElementById('editPermMachines').checked,
+    canManageFinance: document.getElementById('editPermFinance').checked,
+    canManageEngineering: document.getElementById('editPermEng').checked,
+    canExportReports: document.getElementById('editPermReports').checked,
+    canClearDb: document.getElementById('editPermClearDb').checked
+  };
+
+  logAuditAction(`Updated permissions & role for ${u.email} to ${label}`);
+  saveAppState(true, `Update Permissions ${u.email}`);
+  closeModal('editPermissionsModal');
+  renderUserAccountsTable();
+  showToast(`Updated permissions for ${u.email}`);
+}
+
+function switchActiveUserRole(roleKey) {
+  let matchedUser = userAccounts.find(u => u.role === roleKey);
+  if (!matchedUser) {
+    matchedUser = {
+      fullName: roleKey === 'admin' ? 'Super Admin' : roleKey === 'engineer' ? 'Field Engineer' : roleKey === 'sales' ? 'Sales Manager' : 'Guest Observer',
+      email: `${roleKey}@electrospintek.com`,
+      role: roleKey,
+      roleLabel: roleKey,
+      status: 'Active',
+      permissions: {
+        canManageUsers: roleKey === 'admin',
+        canEditMachines: roleKey === 'admin' || roleKey === 'engineer',
+        canManageFinance: roleKey === 'admin' || roleKey === 'sales',
+        canManageEngineering: roleKey === 'admin' || roleKey === 'engineer',
+        canExportReports: roleKey !== 'observer',
+        canClearDb: roleKey === 'admin'
+      }
+    };
+  }
+
+  activeUser = matchedUser;
+  applyUserRolePermissions(activeUser);
+  showToast(`Switched view to role: ${roleKey.toUpperCase()}`);
 }
 
 function toggleUserActiveStatus(idx) {
@@ -3935,4 +4046,13 @@ window.fetchAndRenderAuditLogs = fetchAndRenderAuditLogs;
 window.applyAuditFilters = applyAuditFilters;
 window.changeAuditPage = changeAuditPage;
 window.handle2FAVerificationSubmit = handle2FAVerificationSubmit;
+window.switchActiveUserRole = switchActiveUserRole;
+window.openEditPermissionsModal = openEditPermissionsModal;
+window.handleSaveUserPermissionsSubmit = handleSaveUserPermissionsSubmit;
+window.autoFillEditPermissionsByRole = autoFillEditPermissionsByRole;
+window.openPasswordResetModal = openPasswordResetModal;
+window.handlePasswordResetSubmit = handlePasswordResetSubmit;
+window.toggleUserActiveStatus = toggleUserActiveStatus;
+window.toggleUser2FA = toggleUser2FA;
+window.deleteUserAccount = deleteUserAccount;
 

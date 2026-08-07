@@ -54,9 +54,13 @@
           <div id="userAvatar" class="user-avatar-circle">A</div>
           <div class="user-info-text">
             <span id="userEmailDisplay" class="user-email-display">admin@electrospintek.com</span>
-            <span id="userRoleBadge" class="user-role-badge">Super Admin</span>
+            <select id="quickRoleSelect" class="form-select form-select-sm" style="background:var(--bg-input); color:var(--primary); font-size:0.75rem; border:1px solid var(--border-color); padding:2px 6px; border-radius:4px;" onchange="switchActiveUserRole(this.value)">
+              <option value="admin">⚡ Super Admin</option>
+              <option value="engineer">🔧 Field Engineer</option>
+              <option value="sales">💰 Sales Lead</option>
+              <option value="observer">👁️ Guest Observer</option>
+            </select>
           </div>
-          <button class="btn-logout" onclick="handleUserLogout()" title="Sign Out">Sign Out</button>
         </div>
       </div>
     </header>
@@ -1816,6 +1820,67 @@
           <div class="flex-end gap-sm">
             <button type="button" class="btn btn-secondary" onclick="closeModal('twoFactorModal')">Cancel</button>
             <button type="submit" class="btn btn-primary">🛡️ Verify & Log In</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT USER GRANULAR PERMISSIONS MODAL -->
+  <div id="editPermissionsModal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 520px; background: var(--bg-card); border: 2px solid var(--primary); border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.8);">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
+        <div class="inline-flex gap-sm align-center">
+          <span style="font-size: 1.4rem;">⚙️</span>
+          <h3 class="section-title" style="margin: 0; font-size: 1.1rem;">Configure User Permissions</h3>
+        </div>
+        <button class="close-btn" onclick="closeModal('editPermissionsModal')">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem 1.25rem;">
+        <input type="hidden" id="editPermUserId">
+        <div class="subtext margin-bottom-md" style="color:var(--text-main); font-weight:700;">
+          Target Account: <span id="editPermUserEmail" class="font-code" style="color:var(--primary);">user@electrospintek.com</span>
+        </div>
+
+        <form onsubmit="handleSaveUserPermissionsSubmit(event)">
+          <div class="form-group margin-bottom-md">
+            <label class="form-label">Primary Assigned Role</label>
+            <select id="editPermRoleSelect" class="form-select" onchange="autoFillEditPermissionsByRole(this.value)">
+              <option value="admin">⚡ Super Administrator</option>
+              <option value="engineer">🔧 Field Engineer</option>
+              <option value="sales">💰 Sales & Finance Manager</option>
+              <option value="observer">👁️ Guest Observer</option>
+            </select>
+          </div>
+
+          <div class="card-box bg-darker margin-bottom-md">
+            <div class="card-box-title" style="font-size:0.85rem; margin-bottom:0.75rem;">🔑 Granular Module Capabilities</div>
+            <div class="grid-2-col" style="gap:0.75rem;">
+              <label class="subtext flex align-center gap-xs" style="color:var(--text-main); cursor:pointer;">
+                <input type="checkbox" id="editPermUsers"> 👥 Manage User Accounts
+              </label>
+              <label class="subtext flex align-center gap-xs" style="color:var(--text-main); cursor:pointer;">
+                <input type="checkbox" id="editPermMachines"> ⚙️ Edit Machine Records
+              </label>
+              <label class="subtext flex align-center gap-xs" style="color:var(--text-main); cursor:pointer;">
+                <input type="checkbox" id="editPermFinance"> 💳 Manage Invoices & Prices
+              </label>
+              <label class="subtext flex align-center gap-xs" style="color:var(--text-main); cursor:pointer;">
+                <input type="checkbox" id="editPermEng"> 🛠️ Engineering Specs & FAT
+              </label>
+              <label class="subtext flex align-center gap-xs" style="color:var(--text-main); cursor:pointer;">
+                <input type="checkbox" id="editPermReports"> 📊 Export Reports & CSV
+              </label>
+              <label class="subtext flex align-center gap-xs" style="color:var(--text-main); cursor:pointer;">
+                <input type="checkbox" id="editPermClearDb"> 🧹 Reset Database
+              </label>
+            </div>
+          </div>
+
+          <div class="flex-end gap-sm">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('editPermissionsModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">✨ Save Permissions</button>
           </div>
         </form>
       </div>
