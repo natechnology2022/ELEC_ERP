@@ -671,33 +671,55 @@ function checkActiveUserSession() {
   }
 }
 
-function handleUserLogin(e) {
+async function handleUserLogin(e) {
   e.preventDefault();
-  const emailInput = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const emailInput = document.getElementById('loginEmail').value.trim();
   const passInput = document.getElementById('loginPassword').value.trim();
   const errorEl = document.getElementById('loginErrorMsg');
 
-  const foundUser = userAccounts.find(u => u.email.toLowerCase() === emailInput && u.password === passInput);
+  if (errorEl) errorEl.style.display = 'none';
 
-  if (foundUser) {
-    if (foundUser.status === 'Disabled') {
-      errorEl.textContent = '❌ Account Disabled: This user account has been disabled by Super Admin.';
-      errorEl.style.display = 'block';
+  try {
+    const response = await fetch('/api/auth/login/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: emailInput, password: passInput })
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      if (data.token) {
+        localStorage.setItem('estek_auth_token', data.token);
+      }
+      completeUserLogin(data.user);
+      return;
+    } else {
+      if (errorEl) {
+        errorEl.textContent = data.message || 'Invalid email address or password combination.';
+        errorEl.style.display = 'block';
+      }
       return;
     }
+  } catch (err) {
+    // Fallback to local user matching if offline
+    const foundUser = userAccounts.find(u => u.email.toLowerCase() === emailInput.toLowerCase() && (u.password === passInput || u.check_password?.(passInput)));
 
-    if (foundUser.twoFactorEnabled) {
-      pending2FAUser = foundUser;
-      document.getElementById('input2FACode').value = '';
-      document.getElementById('twoFactorModal').classList.add('active');
-      setTimeout(() => document.getElementById('input2FACode').focus(), 100);
-      return;
+    if (foundUser) {
+      if (foundUser.status === 'Disabled' || !foundUser.isActive) {
+        if (errorEl) {
+          errorEl.textContent = '❌ Account Disabled: This user account has been disabled by Super Admin.';
+          errorEl.style.display = 'block';
+        }
+        return;
+      }
+      completeUserLogin(foundUser);
+    } else {
+      if (errorEl) {
+        errorEl.textContent = 'Invalid email address or password combination.';
+        errorEl.style.display = 'block';
+      }
     }
-
-    completeUserLogin(foundUser);
-  } else {
-    errorEl.textContent = 'Invalid email address or password combination.';
-    errorEl.style.display = 'block';
   }
 }
 
@@ -717,11 +739,13 @@ function handle2FAVerificationSubmit(e) {
 function completeUserLogin(user) {
   activeUser = user;
   localStorage.setItem('estek_active_user_v15', JSON.stringify(activeUser));
-  document.getElementById('loginErrorMsg').style.display = 'none';
+  if (document.getElementById('loginErrorMsg')) {
+    document.getElementById('loginErrorMsg').style.display = 'none';
+  }
   applyUserRolePermissions(activeUser);
   hideLoginScreen();
-  showToast(`Welcome back, ${activeUser.fullName}! (${activeUser.roleLabel})`);
-  logAuditAction(`User logged in securely: ${activeUser.email} (${activeUser.roleLabel})`);
+  showToast(`Welcome back, ${activeUser.fullName || activeUser.email}!`);
+  syncWithServerDatabase();
 }
 
 function handleUserSignUp(e) {
