@@ -1084,25 +1084,6 @@ function handleCreateNewUser(e) {
   showToast(`Created user account for ${name}`);
 }
 
-function deleteUserAccount(userId) {
-  if (currentRole !== 'admin') return;
-  const user = userAccounts.find(u => u.id === userId);
-  if (!user) return;
-
-  if (user.email === 'admin@electrospintek.com') {
-    alert("The primary Super Admin account cannot be deleted.");
-    return;
-  }
-
-  if (confirm(`⚠️ CONFIRM DELETE: Are you sure you want to delete user account "${user.fullName}" (${user.email})?`)) {
-    userAccounts = userAccounts.filter(u => u.id !== userId);
-    logAuditAction(`Deleted user account ${user.email}`);
-    saveAppState(true, `Delete User ${user.email}`);
-    renderUserAccountsTable();
-    showToast(`Deleted user account ${user.email}`);
-  }
-}
-
 // --- EXPORT & IMPORT GOOGLE SHEETS / EXCEL DATA SYSTEM ---
 function openExportModal() {
   document.getElementById('exportModal').classList.add('active');
